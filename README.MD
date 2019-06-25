@@ -1,0 +1,21 @@
+使用方法：
+0、将java-agent打包为e:/javaagent.jar下（打包时需要指定MANIFEST.MF文件）
+1、用户的项目中引入
+<dependency>
+	<groupId>org.codehaus.groovy</groupId>
+	<artifactId>groovy-all</artifactId>
+	<version>3.0.0-beta-1</version>
+	<type>pom</type>
+</dependency>
+<dependency>
+	<groupId>org.javassist</groupId>
+	<artifactId>javassist</artifactId>
+	<version>3.20.0-GA</version>
+</dependency>
+2、将src/test/resources/groovy-script/agent.groovy拷贝到e:/groovy-script/agent.groovy
+3、用户app启动时添加jvm参数-javaagent:e:/javaagent.jar
+4、接下来，修改agent.groovy,可以动态修改类
+5、TODO
+	agent.groovy中实现远程加载groovy代码
+	agent.groovy加载远程groovy代码时判断最后修改时间
+	
