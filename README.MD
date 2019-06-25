@@ -18,4 +18,5 @@
 5、TODO
 	agent.groovy中实现远程加载groovy代码
 	agent.groovy加载远程groovy代码时判断最后修改时间
+	java-agent项目打包方式，改成maven配置方式
 	
