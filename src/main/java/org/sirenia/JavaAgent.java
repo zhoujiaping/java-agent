@@ -4,58 +4,52 @@ import java.io.File;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
-import java.lang.reflect.Method;
 import java.security.ProtectionDomain;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashSet;
+import java.util.Set;
 
-import org.sirenia.groovy.GroovyScriptShell;
-import org.sirenia.javassist.MethodInvoker;
-import org.sirenia.javassist.MyMethodProxy;
+import org.sirenia.groovy.GroovyScriptMethodRunner;
 
-import groovy.lang.Binding;
-import javassist.CtClass;
+import groovy.lang.GroovyObject;
 
 public class JavaAgent implements ClassFileTransformer {
-	private Map<String,String> loadedClass = new ConcurrentHashMap<>();
+	private GroovyScriptMethodRunner groovyRunner = new GroovyScriptMethodRunner();
+	private static String groovyFile;
+	private long prevModified = 0;
+	private GroovyObject groovyObject;
+	private Set<String> mustIgnored = new HashSet<>();
+	public JavaAgent(){
+		groovyRunner.initGroovyClassLoader();
+		/**
+		 * 如果我们在transform中调用了Method#invoke方法，就必须忽略这个类。
+		 * 否则执行Method#invoke要去加载MethodHandleImpl，加载MethodHandleImpl又要去执行Method#invoke，死循环了。
+		 */
+		mustIgnored.add("java/lang/invoke/MethodHandleImpl");
+	}
 	@Override
 	public byte[] transform(ClassLoader classLoader, String className, Class<?> clazz, ProtectionDomain domain, byte[] bytes)
 			throws IllegalClassFormatException {
-		if(className == null){
-			return null;
-		}
-        className = className.replace("/", ".");
-		if(!className.contains("One")){
-			return null;
-		}
-		if(loadedClass.containsKey(className)){
-			return null;
-		}
-		loadedClass.put(className, "");
-		MethodInvoker invoker = new MethodInvoker(){
-			@Override
-			public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
-				Binding binding = new Binding();
-				binding.setVariable("self", self);
-				binding.setVariable("thisMethod", thisMethod);
-				binding.setVariable("proceed", proceed);
-				binding.setVariable("args", args);
-				File groovyFile = new File("e:/groovy-script/agent.groovy");
-				Object res = GroovyScriptShell.evaluate(groovyFile, binding );
-				return res;
-			}
-		};
+		//System.out.println("加载: "+className);
 		try {
-			CtClass ctClass = MyMethodProxy.proxy(className, null, invoker);
-			System.out.println(className);
-			return ctClass.toBytecode();
-		} catch (Exception e) {
-			//jvm不会立即打印错误消息，所以要手动调用打印
-			e.printStackTrace();
-			throw new RuntimeException(e);
+			if(mustIgnored.contains(className)){
+				return null;
+			}
+			File file = new File(groovyFile);
+			long lastModifyTime = file.lastModified();
+			if(prevModified<lastModifyTime){
+				prevModified = lastModifyTime;
+				groovyObject = groovyRunner.loadGroovyScript(file);
+			}
+			Object res = groovyObject.invokeMethod("transform", new Object[]{classLoader,className,clazz,domain,bytes});
+			//groovyObject.invokeMethod("transform",null);
+			return (byte[]) res;
+		} catch (Exception e1) {
+			e1.printStackTrace();
+			throw new RuntimeException(e1);
 		}
 	}
     public static void    premain(String agentOps,Instrumentation inst){
+    	groovyFile = agentOps;
         inst.addTransformer(new JavaAgent(),true);
     }
 

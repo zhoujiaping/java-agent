@@ -4,7 +4,12 @@ import java.io.File;
 
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
-
+/**
+ * 这种方式会每次都解析groovy代码，性能开销不如GroovyClassLoader方式。
+ * GroovyScriptShell方式实际上是创建了一个脚本类，执行了其实例的run方法。
+ * @author Administrator
+ *
+ */
 public class GroovyScriptShell {
 	public static Object evaluate(File file, Binding binding) {
 		// Binding binding = new Binding();

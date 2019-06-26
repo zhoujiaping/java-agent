@@ -13,7 +13,7 @@
 	<version>3.20.0-GA</version>
 </dependency>
 2、将src/test/resources/groovy-script/agent.groovy拷贝到e:/groovy-script/agent.groovy
-3、用户app启动时添加jvm参数-javaagent:e:/javaagent.jar
+3、用户app启动时添加jvm参数-javaagent:e:/javaagent.jar=e:/groovy-script/agent.groovy
 4、接下来，修改agent.groovy,可以动态修改类
 5、TODO
 	agent.groovy中实现远程加载groovy代码
