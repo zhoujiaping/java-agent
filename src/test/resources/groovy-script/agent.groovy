@@ -29,7 +29,7 @@ class MyClassFileTransformer{
 			public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
 				def res = "qwer"
 				//调用另一个groovy脚本
-				Object o = shell.evaluate(new File("e:/second.groovy"))
+				Object o = shell.evaluate(new File("e:/groovy-script/second.groovy"))
 				o.invokeMethod("hello",["zhou"] as Object[])
 				return res;
 			}
