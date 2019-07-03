@@ -15,6 +15,13 @@ public class ClassUtil {
 		typeMap.put("double", double.class);
 		typeMap.put("char", char.class);
 	}
+	public static Class<?> forName(String name,boolean init,ClassLoader cl) throws ClassNotFoundException{
+		Class<?> c = typeMap.get(name);
+		if(c!=null){
+			return c;
+		}
+		return Class.forName(name,init,cl);
+	}
 	public static Class<?> forName(String name) throws ClassNotFoundException{
 		Class<?> c = typeMap.get(name);
 		if(c!=null){

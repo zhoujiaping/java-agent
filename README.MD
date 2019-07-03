@@ -14,9 +14,16 @@
 </dependency>
 2、将src/test/resources/groovy-script/agent.groovy拷贝到e:/groovy-script/agent.groovy
 3、用户app启动时添加jvm参数-javaagent:e:/javaagent.jar=e:/groovy-script/agent.groovy
+-javaagent:e:/java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar=e:/groovy-script/agent.groovy
 4、接下来，修改agent.groovy,可以动态修改类
 5、TODO
 	agent.groovy中实现远程加载groovy代码
 	agent.groovy加载远程groovy代码时判断最后修改时间
-	java-agent项目打包方式，改成maven配置方式
-	
+	java-agent项目打包方式，改成maven配置方式（已实现）
+6、局限
+JavaAgent#transform被调用时，当前上下文类加载器是AppClassLoader。
+如果是tomcat环境
+MyMethodProxy#proxy时，当前上下文类加载器是AppClassLoader。
+MyMethodProxy#invoke时，当前上下文类加载器是ParallelWebappClassLoader。
+由于
+7、TO FIX
