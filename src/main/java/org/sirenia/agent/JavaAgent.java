@@ -1,4 +1,4 @@
-package org.sirenia;
+package org.sirenia.agent;
 
 import java.io.File;
 import java.lang.instrument.ClassFileTransformer;
@@ -8,7 +8,8 @@ import java.security.ProtectionDomain;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.sirenia.groovy.GroovyScriptMethodRunner;
+import org.sirenia.agent.groovy.GroovyScriptMethodRunner;
+import org.sirenia.agent.util.PackageUtil;
 
 import groovy.lang.GroovyObject;
 
@@ -18,6 +19,7 @@ public class JavaAgent implements ClassFileTransformer {
 	private long prevModified = 0;
 	private GroovyObject groovyObject;
 	private Set<String> mustIgnored = new HashSet<>();
+	private boolean loaded;
 	public JavaAgent(){
 		groovyRunner.initGroovyClassLoader();
 		/**
@@ -31,8 +33,27 @@ public class JavaAgent implements ClassFileTransformer {
 			throws IllegalClassFormatException {
 		//System.out.println("加载: "+className);
 		try {
+			if(className == null){
+				return null;
+			}
 			if(mustIgnored.contains(className)){
 				return null;
+			}
+			//System.out.println("transform："+Thread.currentThread().getContextClassLoader());
+			/**
+			 * 提前将java-agent项目中的类加载（被appclassloader加载），否则由于调用时机的不同，有些类会被WebappClassLoaderBase加载，
+			 * 当我们对WebappClassLoaderBase也进行了拦截的时候，就会出现无限递归调用。
+			 */
+			if(!loaded){
+				Set<String> classes = PackageUtil.getClassSet("org.sirenia.agent", true);
+				classes.forEach(item->{
+					try {
+						Class.forName(item);
+					} catch (ClassNotFoundException e) {
+						throw new RuntimeException(e);
+					}
+				});
+				loaded = true;
 			}
 			File file = new File(groovyFile);
 			long lastModifyTime = file.lastModified();

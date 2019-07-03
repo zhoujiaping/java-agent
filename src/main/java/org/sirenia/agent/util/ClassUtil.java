@@ -1,4 +1,4 @@
-package org.sirenia.util;
+package org.sirenia.agent.util;
 
 import java.util.HashMap;
 import java.util.Map;

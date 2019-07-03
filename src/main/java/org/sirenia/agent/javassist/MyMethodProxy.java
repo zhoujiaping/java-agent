@@ -1,4 +1,4 @@
-package org.sirenia.javassist;
+package org.sirenia.agent.javassist;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -10,8 +10,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.sirenia.util.ClassUtil;
-import org.sirenia.util.JRender;
+import org.sirenia.agent.util.ClassUtil;
+import org.sirenia.agent.util.StrFmt;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;
@@ -50,9 +50,6 @@ public class MyMethodProxy {
 			proceed = selfClass.getDeclaredMethod(methodName + "$proxy", parameterTypes);
 		}
 		MethodInvoker invoker = contextMap.get(uid);
-		if (!thisMethod.isAccessible()) {
-			thisMethod.setAccessible(true);
-		}
 		if (!proceed.isAccessible()) {
 			proceed.setAccessible(true);
 		}
@@ -100,7 +97,7 @@ public class MyMethodProxy {
 			variables.put("className", wrapQuota(ct.getName()));
 			variables.put("methodName", wrapQuota(methodName));
 			variables.put("parameterTypes", wrapQuota(parameterTypes));
-			bodyString = new JRender("${", "}").withVariables(variables).render(bodyString);
+			bodyString = new StrFmt("${", "}").withVariables(variables).render(bodyString);
 			method.setBody(bodyString);
 		}
 		// ct.writeFile();

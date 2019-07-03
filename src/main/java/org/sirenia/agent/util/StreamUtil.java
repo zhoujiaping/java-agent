@@ -1,4 +1,4 @@
-package org.sirenia.util;
+package org.sirenia.agent.util;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;

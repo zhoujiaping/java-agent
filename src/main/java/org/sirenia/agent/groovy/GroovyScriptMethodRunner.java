@@ -1,4 +1,4 @@
-package org.sirenia.groovy;
+package org.sirenia.agent.groovy;
 
 import java.io.File;
 

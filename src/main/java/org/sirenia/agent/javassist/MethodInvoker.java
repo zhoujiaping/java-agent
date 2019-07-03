@@ -1,4 +1,4 @@
-package org.sirenia.javassist;
+package org.sirenia.agent.javassist;
 
 import java.lang.reflect.Method;
 

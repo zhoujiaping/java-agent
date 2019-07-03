@@ -1,9 +1,9 @@
-package org.sirenia.util;
+package org.sirenia.agent.util;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class JRender {
+public class StrFmt {
 	 private String openToken;
 	  private String closeToken;
 	  private NullValueStrategy nullValueStrategy  = NullValueStrategy.ThrowException;
@@ -11,20 +11,20 @@ public class JRender {
 	public static enum NullValueStrategy{
 		ThrowException,ReturnEmptyString,ReturnNullString
 	}
-	public JRender(String openToken, String closeToken){
+	public StrFmt(String openToken, String closeToken){
 		 this.openToken = openToken;
 		    this.closeToken = closeToken;
 	}
-	public JRender(String openToken, String closeToken,NullValueStrategy nullValueStrategy){
+	public StrFmt(String openToken, String closeToken,NullValueStrategy nullValueStrategy){
 		 this.openToken = openToken;
 		    this.closeToken = closeToken;
 		    this.nullValueStrategy = nullValueStrategy;
 	}
-	public JRender withVariables(Map<String,Object> variables){
+	public StrFmt withVariables(Map<String,Object> variables){
 		this.variables = variables;
 		return this;
 	}
-	public JRender withVariable(String key,Object value){
+	public StrFmt withVariable(String key,Object value){
 		if(variables==null){
 			variables = new HashMap<>();
 		}
@@ -56,7 +56,7 @@ public class JRender {
 	}
 	public static void main(String[] args) {
 		String text = "i am {name},\r\nhello {yourname}";
-		JRender jrender = new JRender("{", "}");
+		StrFmt jrender = new StrFmt("{", "}");
 		String res = jrender.withVariable("name", "zhou").withVariable("yourname", "sirenia").render(text);
 		System.out.println(res);
 	}

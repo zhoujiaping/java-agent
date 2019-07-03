@@ -2,13 +2,15 @@ import java.lang.reflect.Method
 import java.security.ProtectionDomain
 import java.util.Map
 import java.util.concurrent.ConcurrentHashMap
-import org.sirenia.groovy.GroovyScriptShell
-import org.sirenia.javassist.MethodInvoker
-import org.sirenia.javassist.JavassistProxy
-import org.sirenia.javassist.MyMethodProxy
+import org.sirenia.agent.groovy.GroovyScriptShell
+import org.sirenia.agent.javassist.MethodInvoker
+import org.sirenia.agent.javassist.JavassistProxy
+import org.sirenia.agent.javassist.MyMethodProxy
+import org.sirenia.agent.javassist.MethodFilter
 
 import groovy.lang.GroovyShell
 import javassist.CtClass
+import javassist.CtMethod
 
 class MyClassFileTransformer{
 	GroovyShell shell = new GroovyShell()
@@ -24,13 +26,15 @@ class MyClassFileTransformer{
 			}
 			if(className == "org.apache.catalina.loader.WebappClassLoaderBase"){
 				return null;
-				/*
-				Thread.currentThread().setContextClassLoader(classLoader);
+				
+				//Thread.currentThread().setContextClassLoader(classLoader);
 				println("WebappClassLoaderBase ContextClassLoader: "+classLoader)
 				loadedClass.put(className, "");
+				//return null;
 				MethodInvoker invoker = new MethodInvoker(){
 					@Override
 					public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
+						//println("WebappClassLoaderBase invoke: "+Thread.currentThread().getContextClassLoader());
 						def res = "qwer"
 						println("before invoke WebappClassLoaderBase")
 						//调用另一个groovy脚本
@@ -44,14 +48,21 @@ class MyClassFileTransformer{
 					}
 				};
 				println("before proxy WebappClassLoaderBase")
-				CtClass ctClass = JavassistProxy.proxy(className, null, invoker);
+				CtClass ctClass = MyMethodProxy.proxy(className, new MethodFilter(){
+					boolean filter(CtMethod m){
+						println(m.getName())
+						return false;
+						return !m.getName().equals("loadClass");
+					}
+				}, invoker);
 				System.out.println(className);
-				return ctClass.toBytecode();*/
+				//return ctClass.toBytecode();
+				return null
 			}
 			
 			if(className=="org.sirenia.EchoServlet"){
 				//return null;
-				Thread.currentThread().setContextClassLoader(classLoader);
+				//Thread.currentThread().setContextClassLoader(classLoader);
 				println("EchoServlet ContextClassLoader: "+classLoader)
 				loadedClass.put(className, "");
 				MethodInvoker invoker = new MethodInvoker(){
