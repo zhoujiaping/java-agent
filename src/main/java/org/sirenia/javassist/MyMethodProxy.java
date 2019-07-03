@@ -20,46 +20,54 @@ import javassist.CtMethod;
 import javassist.CtNewMethod;
 import javassist.LoaderClassPath;
 import javassist.NotFoundException;
+
 /**
  * 结合PackageUtil，可以设置指定包下的指定类的指定方法的 方法拦截。支持环绕通知。
  */
 public class MyMethodProxy {
-	private static final Map<String,MethodInvoker> contextMap = new ConcurrentHashMap<>();
-	
-	public static Object invoke(String uid,String className, String methodName,String parameterTypeNames,Object self,Object[] args) throws Throwable{
-		Class<?> selfClass = Class.forName(className);
-		String[] parameterTypeArray = parameterTypeNames.split(",");
-		Class<?>[] parameterTypes = new Class[parameterTypeArray.length];
-		for(int i=0;i<parameterTypeArray.length;i++){
-			parameterTypes[i] = ClassUtil.forName(parameterTypeArray[i]);
+	private static final Map<String, MethodInvoker> contextMap = new ConcurrentHashMap<>();
+	static{
+		ClassLoader cl = MyMethodProxy.class.getClassLoader();
+		System.out.println(cl);
+	}
+
+	public static Object invoke(String uid, String className, String methodName, String parameterTypeNames, Object self,
+			Object[] args) throws Throwable {
+		ClassLoader cl = Thread.currentThread().getContextClassLoader();
+		Class<?> selfClass = Class.forName(className,true,cl);
+		Method thisMethod = null;
+		Method proceed = null;
+		if(parameterTypeNames==""){
+			thisMethod = selfClass.getDeclaredMethod(methodName);
+			proceed = selfClass.getDeclaredMethod(methodName + "$proxy");
+		}else{
+			String[] parameterTypeArray = parameterTypeNames.split(",");
+			Class<?>[] parameterTypes = new Class[parameterTypeArray.length];
+			for (int i = 0; i < parameterTypeArray.length; i++) {
+				parameterTypes[i] = ClassUtil.forName(parameterTypeArray[i],true,cl);
+			}
+			thisMethod = selfClass.getDeclaredMethod(methodName, parameterTypes);
+			proceed = selfClass.getDeclaredMethod(methodName + "$proxy", parameterTypes);
 		}
-		Method thisMethod = selfClass.getMethod(methodName,parameterTypes);
-		Method proceed = selfClass.getMethod(methodName+"$proxy",parameterTypes);
 		MethodInvoker invoker = contextMap.get(uid);
+		if (!thisMethod.isAccessible()) {
+			thisMethod.setAccessible(true);
+		}
+		if (!proceed.isAccessible()) {
+			proceed.setAccessible(true);
+		}
 		return invoker.invoke(self, thisMethod, proceed, args);
 	}
-	public static CtClass proxy(String className, MyMethodFilter[] filters, MethodInvoker invoker) throws NotFoundException, CannotCompileException, ClassNotFoundException, IOException {
-		ClassPool pool = ClassPool.getDefault();
-		ClassLoader classLoader = MyMethodProxy.class.getClassLoader();
-		pool.appendClassPath(new LoaderClassPath(classLoader));
-		CtClass ct = pool.getCtClass(className);
-		//CtClass ct = pool.get(className);
+
+	public static CtClass proxy(CtClass ct, MethodFilter filter, MethodInvoker invoker)
+			throws NotFoundException, CannotCompileException, ClassNotFoundException, IOException {
 		// 解冻
 		ct.defrost();
 		String uid = UUID.randomUUID().toString();
-		CtMethod[] methods = ct.getDeclaredMethods();//ct.getMethods();
+		CtMethod[] methods = ct.getDeclaredMethods();// ct.getMethods();
 		for (int i = 0; i < methods.length; i++) {
 			CtMethod method = methods[i];
-			boolean accept = true;
-			if(filters!=null){
-				for(MyMethodFilter filter : filters){
-					if(!filter.equals(method)){
-						accept = false;
-						break;
-					}
-				}
-			}
-			if(!accept){
+			if (filter != null && !filter.filter(method)) {
 				continue;
 			}
 			String methodName = method.getName();
@@ -78,27 +86,40 @@ public class MyMethodProxy {
 			List<String> body = new ArrayList<>();
 			body.add("{");
 			if (isStatic) {
-				body.add("return ($r)${methodProxyName}.invoke(${uid},${className},${methodName},${parameterTypes},null,$args);");
+				body.add(
+						"return ($r)${methodProxyName}.invoke(${uid},${className},${methodName},${parameterTypes},null,$args);");
 			} else {
-				body.add("return ($r)${methodProxyName}.invoke(${uid},${className},${methodName},${parameterTypes},$0,$args);");
+				body.add(
+						"return ($r)${methodProxyName}.invoke(${uid},${className},${methodName},${parameterTypes},$0,$args);");
 			}
 			body.add("}");
 			String bodyString = String.join("\n", body);
 			Map<String, Object> variables = new HashMap<>();
 			variables.put("methodProxyName", methodProxyName);
 			variables.put("uid", wrapQuota(uid));
-			variables.put("className", wrapQuota(className));
+			variables.put("className", wrapQuota(ct.getName()));
 			variables.put("methodName", wrapQuota(methodName));
 			variables.put("parameterTypes", wrapQuota(parameterTypes));
-			bodyString = new JRender("${","}").withVariables(variables ).render(bodyString);
+			bodyString = new JRender("${", "}").withVariables(variables).render(bodyString);
 			method.setBody(bodyString);
 		}
-		//ct.writeFile();
-		//ct.toClass();
+		// ct.writeFile();
+		// ct.toClass();
 		contextMap.put(uid, invoker);
 		return ct;
+	}
+
+	public static CtClass proxy(String className, MethodFilter filter, MethodInvoker invoker)
+			throws NotFoundException, CannotCompileException, ClassNotFoundException, IOException {
+		ClassPool pool = ClassPool.getDefault();
+		ClassLoader classLoader = MyMethodProxy.class.getClassLoader();
+		pool.appendClassPath(new LoaderClassPath(classLoader));
+		CtClass ct = pool.getCtClass(className);
+		// CtClass ct = pool.get(className);
+		return proxy(ct, filter, invoker);
 	};
-	private static String wrapQuota(String text){
-		return "\""+text+"\"";
+
+	private static String wrapQuota(String text) {
+		return "\"" + text + "\"";
 	}
 }

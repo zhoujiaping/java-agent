@@ -1,5 +1,8 @@
 def obj = new Expando()
-obj.hello = {
-	name->name
+obj.doGet = {
+	req,resp->
+	PrintWriter pw = resp.getWriter();
+	pw.print("hello hello");
+	pw.flush();
 }
 obj
