@@ -31,7 +31,6 @@ public class JavaAgent implements ClassFileTransformer {
 	@Override
 	public byte[] transform(ClassLoader classLoader, String className, Class<?> clazz, ProtectionDomain domain, byte[] bytes)
 			throws IllegalClassFormatException {
-		//System.out.println("加载: "+className);
 		try {
 			if(className == null){
 				return null;
@@ -39,12 +38,11 @@ public class JavaAgent implements ClassFileTransformer {
 			if(mustIgnored.contains(className)){
 				return null;
 			}
-			//System.out.println("transform："+Thread.currentThread().getContextClassLoader());
 			/**
 			 * 提前将java-agent项目中的类加载（被appclassloader加载），否则由于调用时机的不同，有些类会被WebappClassLoaderBase加载，
 			 * 当我们对WebappClassLoaderBase也进行了拦截的时候，就会出现无限递归调用。
 			 */
-			if(!loaded){
+			/*if(!loaded){
 				Set<String> classes = PackageUtil.getClassSet("org.sirenia.agent", true);
 				classes.forEach(item->{
 					try {
@@ -54,7 +52,7 @@ public class JavaAgent implements ClassFileTransformer {
 					}
 				});
 				loaded = true;
-			}
+			}*/
 			File file = new File(groovyFile);
 			long lastModifyTime = file.lastModified();
 			if(prevModified<lastModifyTime){

@@ -77,7 +77,6 @@ public class JavassistProxy {
 	}
 	public static Object invoke(Class<?> selfClass,Object self,String method,Class<?>[] types,Object[] args,String invokerId) throws Throwable{
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
-		//System.out.println("invoke的类加载器："+cl);
 		/*Class<?>[] types2 = Stream.of(types).map(type->{
 			try {
 				//此路不通。HttpServletRequest之前已经被appclassloader加载过，
@@ -88,9 +87,6 @@ public class JavassistProxy {
 			}
 		}).collect(Collectors.toList()).toArray(new Class<?>[0]);*/
 		Method thisMethod = selfClass.getDeclaredMethod(method, types);
-		/*if(types.length>0){
-			System.out.println(types[0].getName()+"的类加载器为"+types[0].getClassLoader());
-		}*/
 		Method proceed = selfClass.getDeclaredMethod(method+methodSuffix, types);
 		if(!proceed.isAccessible()){
 			proceed.setAccessible(true);

@@ -21,9 +21,7 @@
 	agent.groovy加载远程groovy代码时判断最后修改时间
 	java-agent项目打包方式，改成maven配置方式（已实现）
 6、局限
-JavaAgent#transform被调用时，当前上下文类加载器是AppClassLoader。
-如果是tomcat环境
-MyMethodProxy#proxy时，当前上下文类加载器是AppClassLoader。
-MyMethodProxy#invoke时，当前上下文类加载器是ParallelWebappClassLoader。
-由于
-7、TO FIX
+不要随便代理类加载器！！！
+比如代理WebappClassLoaderBase#loadClass方法会导致stackoverflow。loadClass方法调用MyMethodProxy#invoke，
+MyMethodProxy#invoke又会调用Class#forName，Class#forName又会调用WebappClassLoaderBase#loadClass。
+所以，为了

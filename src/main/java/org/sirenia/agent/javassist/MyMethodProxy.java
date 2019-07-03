@@ -26,10 +26,6 @@ import javassist.NotFoundException;
  */
 public class MyMethodProxy {
 	private static final Map<String, MethodInvoker> contextMap = new ConcurrentHashMap<>();
-	static{
-		ClassLoader cl = MyMethodProxy.class.getClassLoader();
-		System.out.println(cl);
-	}
 
 	public static Object invoke(String uid, String className, String methodName, String parameterTypeNames, Object self,
 			Object[] args) throws Throwable {

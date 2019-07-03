@@ -31,7 +31,6 @@ public class JavassistAopTest {
 		method.addCatch("", pool.getCtClass("java.lang.Throwable"));*/
 		List<String> body = new ArrayList<>();
 		body.add("{");
-		//body.add("System.out.println($sig);");
 		body.add("return ($r)$proceed($class,$0,\""+method.getName()+"\",$sig,$args);");
 		body.add("}");
 		method.setBody(String.join("\n", body), "org.sirenia.JavassistProxy", "invoke");

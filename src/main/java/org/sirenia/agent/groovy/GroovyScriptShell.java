@@ -29,7 +29,6 @@ public class GroovyScriptShell {
 		Object result;
 		try {
 			result = groovyShell.evaluate(script);
-			System.out.println("groovy: "+result);
 			return result;
 		} catch (Exception e) {
 			throw new RuntimeException(e);

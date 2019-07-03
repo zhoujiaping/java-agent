@@ -24,67 +24,26 @@ class MyClassFileTransformer{
 			if(loadedClass.containsKey(className)){
 				return null;
 			}
-			if(className == "org.apache.catalina.loader.WebappClassLoaderBase"){
+			def parts = className.split('\\.')
+			def simpleName = parts[-1]
+			File file = new File("e:/groovy-script/${simpleName}.groovy");
+			if(!file.exists()){
 				return null;
-				
-				//Thread.currentThread().setContextClassLoader(classLoader);
-				println("WebappClassLoaderBase ContextClassLoader: "+classLoader)
-				loadedClass.put(className, "");
-				//return null;
-				MethodInvoker invoker = new MethodInvoker(){
-					@Override
-					public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
-						//println("WebappClassLoaderBase invoke: "+Thread.currentThread().getContextClassLoader());
-						def res = "qwer"
-						println("before invoke WebappClassLoaderBase")
-						//调用另一个groovy脚本
-						//Object o = shell.evaluate(new File("e:/groovy-script/second.groovy"))
-						//o.invokeMethod("hello",["zhou"] as Object[])
-						//def resp = args[1];
-						//PrintWriter pw = resp.getWriter();
-						//pw.print("groovy2");
-						//pw.flush();
-						return proceed.invoke(self,args);
-					}
-				};
-				println("before proxy WebappClassLoaderBase")
-				CtClass ctClass = MyMethodProxy.proxy(className, new MethodFilter(){
-					boolean filter(CtMethod m){
-						println(m.getName())
-						return false;
-						return !m.getName().equals("loadClass");
-					}
-				}, invoker);
-				System.out.println(className);
-				//return ctClass.toBytecode();
-				return null
 			}
-			
-			if(className=="org.sirenia.EchoServlet"){
-				//return null;
-				//Thread.currentThread().setContextClassLoader(classLoader);
-				println("EchoServlet ContextClassLoader: "+classLoader)
-				loadedClass.put(className, "");
-				MethodInvoker invoker = new MethodInvoker(){
-					@Override
-					public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
-						def res = "qwer"
-						println("before invoke EchoServlet")
-						//调用另一个groovy脚本
-						Binding binding = new Binding(['args':args]);
-						Object o = shell.evaluate(new File("e:/groovy-script/second.groovy"))
-						o.invokeMethod(thisMethod.getName(),args)
-						return res;
-					}
-				};
-				println("before proxy EchoServlet")
-				CtClass ctClass = MyMethodProxy.proxy(className, null, invoker);
-				System.out.println(className);
-				return ctClass.toBytecode();
-			}
-			
-			return null;
-			
+			loadedClass.put(className, "");
+			MethodInvoker invoker = new MethodInvoker(){
+						@Override
+						public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
+							//调用另一个groovy脚本
+							Object o = shell.evaluate(file)
+							if(o[thisMethod.getName()] == null){
+								return proceed.invoke(self,args)
+							}
+							return o.invokeMethod(thisMethod.getName(),args)
+						}
+					};
+			CtClass ctClass = MyMethodProxy.proxy(className, null, invoker);
+			return ctClass.toBytecode();
 		} catch (Exception e) {
 			//jvm不会立即打印错误消息，所以要手动调用打印
 			e.printStackTrace();
