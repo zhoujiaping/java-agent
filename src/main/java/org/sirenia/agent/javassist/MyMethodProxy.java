@@ -25,7 +25,8 @@ import javassist.NotFoundException;
  * 结合PackageUtil，可以设置指定包下的指定类的指定方法的 方法拦截。支持环绕通知。
  */
 public class MyMethodProxy {
-	private static final Map<String, MethodInvoker> contextMap = new ConcurrentHashMap<>();
+	private static final Map<String, MethodInvoker> invokerMap = new ConcurrentHashMap<>();
+	private static final Map<ClassLoader, ClassPool> poolMap = new ConcurrentHashMap<>();
 
 	public static Object invoke(String uid, String className, String methodName, String parameterTypeNames, Object self,
 			Object[] args) throws Throwable {
@@ -45,7 +46,7 @@ public class MyMethodProxy {
 			thisMethod = selfClass.getDeclaredMethod(methodName, parameterTypes);
 			proceed = selfClass.getDeclaredMethod(methodName + "$proxy", parameterTypes);
 		}
-		MethodInvoker invoker = contextMap.get(uid);
+		MethodInvoker invoker = invokerMap.get(uid);
 		if (!proceed.isAccessible()) {
 			proceed.setAccessible(true);
 		}
@@ -98,13 +99,19 @@ public class MyMethodProxy {
 		}
 		// ct.writeFile();
 		// ct.toClass();
-		contextMap.put(uid, invoker);
+		invokerMap.put(uid, invoker);
 		return ct;
 	}
 
 	public static CtClass proxy(String className, MethodFilter filter, MethodInvoker invoker)
 			throws NotFoundException, CannotCompileException, ClassNotFoundException, IOException {
-		ClassPool pool = ClassPool.getDefault();
+		ClassLoader cl = Thread.currentThread().getContextClassLoader();
+		ClassPool pool = poolMap.get(cl);
+		if(pool == null){
+			ClassLoader parent = cl.getParent();
+			pool = new ClassPool(poolMap.get(parent));
+			poolMap.put(cl, pool);
+		}
 		ClassLoader classLoader = MyMethodProxy.class.getClassLoader();
 		pool.appendClassPath(new LoaderClassPath(classLoader));
 		CtClass ct = pool.getCtClass(className);

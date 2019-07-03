@@ -24,6 +24,10 @@ class MyClassFileTransformer{
 			if(loadedClass.containsKey(className)){
 				return null;
 			}
+			//配置哪些类需要被代理，如果不配置，groovy的类也会被代理。而groovy的类我们不需要代理。
+			if(!className.startsWith("org.sirenia")){
+				return null;
+			}
 			def parts = className.split('\\.')
 			def simpleName = parts[-1]
 			File file = new File("e:/groovy-script/${simpleName}.groovy");
