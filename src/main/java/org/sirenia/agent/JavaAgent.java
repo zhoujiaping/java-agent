@@ -9,17 +9,16 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.sirenia.agent.groovy.GroovyScriptMethodRunner;
-import org.sirenia.agent.util.PackageUtil;
 
 import groovy.lang.GroovyObject;
 
 public class JavaAgent implements ClassFileTransformer {
 	private GroovyScriptMethodRunner groovyRunner = new GroovyScriptMethodRunner();
-	private static String groovyFile;
+	private static String groovyFile = "/tomcat/mock/agent.groovy";
 	private long prevModified = 0;
 	private GroovyObject groovyObject;
 	private Set<String> mustIgnored = new HashSet<>();
-	private boolean loaded;
+	//private boolean loaded;
 	public JavaAgent(){
 		groovyRunner.initGroovyClassLoader();
 		/**
@@ -67,7 +66,9 @@ public class JavaAgent implements ClassFileTransformer {
 		}
 	}
     public static void    premain(String agentOps,Instrumentation inst){
-    	groovyFile = agentOps;
+    	if(agentOps!=null && !agentOps.trim().isEmpty()){
+    		groovyFile = agentOps;
+    	}
         inst.addTransformer(new JavaAgent(),true);
     }
 

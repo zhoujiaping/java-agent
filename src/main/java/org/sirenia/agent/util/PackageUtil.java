@@ -69,7 +69,7 @@ public class PackageUtil {
 	 * @throws IOException 
 	 * @throws ClassNotFoundException 
 	 */
-	private static Set<String> getClassFromFileName(String filePath, String packageName, boolean recursive) throws ClassNotFoundException, IOException {
+	public static Set<String> getClassFromFileName(String filePath, String packageName, boolean recursive) throws ClassNotFoundException, IOException {
 		Path path = Paths.get(filePath);
 		return getClassSetFromPath(path,packageName, packageName, recursive);
 	}
@@ -145,7 +145,7 @@ public class PackageUtil {
 	 * @throws IOException
 	 * @throws ClassNotFoundException 
 	 */
-	private static Set<String> getClassFromJarFileName(String filePath, String packageName, boolean recursive)
+	public static Set<String> getClassFromJarFileName(String filePath, String packageName, boolean recursive)
 			throws IOException, ClassNotFoundException {
 		JarFile jar = new JarFile(filePath);
 		return getClassFromJarFile(jar, packageName, recursive);
