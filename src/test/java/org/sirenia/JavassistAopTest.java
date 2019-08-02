@@ -1,42 +1,31 @@
 package org.sirenia;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.lang.reflect.Method;
 
 import org.junit.Test;
+import org.sirenia.agent.javassist.JavassistProxy;
+import org.sirenia.agent.javassist.MethodInvoker;
 
 import javassist.CannotCompileException;
-import javassist.ClassPool;
 import javassist.CtClass;
-import javassist.CtMethod;
-import javassist.CtNewMethod;
-import javassist.LoaderClassPath;
 import javassist.NotFoundException;
 
 public class JavassistAopTest {
 	@Test
-	public void test() throws NotFoundException, CannotCompileException, IOException{
+	public void test() throws NotFoundException, CannotCompileException, IOException, ClassNotFoundException{
 		String className = "org.sirenia.Dog";
-		ClassPool pool = ClassPool.getDefault();
-		ClassLoader classLoader = JavassistAopTest.class.getClassLoader();
-		pool.insertClassPath(new LoaderClassPath(classLoader));
-		CtClass ct = pool.getCtClass(className);
-		CtMethod method = ct.getDeclaredMethod("shout");
-		CtMethod copyMethod = CtNewMethod.copy(method, method.getName() + "$proxy", ct, null);
-		ct.addMethod(copyMethod);
-		/*method.insertBefore("");
-		method.insertAfter("");
-		method.insertAfter("", true);
-		method.addCatch("", pool.getCtClass("java.lang.Throwable"));*/
-		List<String> body = new ArrayList<>();
-		body.add("{");
-		body.add("return ($r)$proceed($class,$0,\""+method.getName()+"\",$sig,$args);");
-		body.add("}");
-		method.setBody(String.join("\n", body), "org.sirenia.JavassistProxy", "invoke");
+		MethodInvoker invoker = new MethodInvoker() {
+			@Override
+			public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
+				System.out.println("123");
+				return null;
+			}
+		};
+		CtClass ct = JavassistProxy.proxy(className, null, invoker );
 		ct.toClass();
 		ct.writeFile();
 		Dog dog = new Dog();
-		System.out.println(dog.shout("zhou"));
+		dog.shoutTwo("456");
 	}
 }

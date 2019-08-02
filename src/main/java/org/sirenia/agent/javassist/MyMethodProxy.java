@@ -36,7 +36,7 @@ public class MyMethodProxy {
 		Method proceed = null;
 		if(parameterTypeNames==""){
 			thisMethod = selfClass.getDeclaredMethod(methodName);
-			proceed = selfClass.getDeclaredMethod(methodName + "$proxy");
+			proceed = selfClass.getDeclaredMethod(methodName + JavassistProxy.methodSuffix);
 		}else{
 			String[] parameterTypeArray = parameterTypeNames.split(",");
 			Class<?>[] parameterTypes = new Class[parameterTypeArray.length];
@@ -44,7 +44,7 @@ public class MyMethodProxy {
 				parameterTypes[i] = ClassUtil.forName(parameterTypeArray[i],true,cl);
 			}
 			thisMethod = selfClass.getDeclaredMethod(methodName, parameterTypes);
-			proceed = selfClass.getDeclaredMethod(methodName + "$proxy", parameterTypes);
+			proceed = selfClass.getDeclaredMethod(methodName + JavassistProxy.methodSuffix, parameterTypes);
 		}
 		MethodInvoker invoker = invokerMap.get(uid);
 		if (!proceed.isAccessible()) {
@@ -67,7 +67,7 @@ public class MyMethodProxy {
 			String methodName = method.getName();
 			int modifiers = method.getModifiers();
 			boolean isStatic = Modifier.isStatic(modifiers);
-			CtMethod copyMethod = CtNewMethod.copy(method, method.getName() + "$proxy", ct, null);
+			CtMethod copyMethod = CtNewMethod.copy(method, method.getName() +JavassistProxy.methodSuffix, ct, null);
 			ct.addMethod(copyMethod);
 			CtClass[] paramCtClasses = method.getParameterTypes();
 			String[] paramClassNames = new String[paramCtClasses.length];

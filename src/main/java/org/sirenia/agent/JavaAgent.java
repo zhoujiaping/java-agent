@@ -61,6 +61,7 @@ public class JavaAgent implements ClassFileTransformer {
 			Object res = groovyObject.invokeMethod("transform", new Object[]{classLoader,className,clazz,domain,bytes});
 			return (byte[]) res;
 		} catch (Exception e1) {
+			System.out.println(className);
 			e1.printStackTrace();
 			throw new RuntimeException(e1);
 		}

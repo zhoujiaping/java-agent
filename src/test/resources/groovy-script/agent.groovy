@@ -11,8 +11,10 @@ import org.sirenia.agent.javassist.MethodFilter
 import groovy.lang.GroovyShell
 import javassist.CtClass
 import javassist.CtMethod
+import org.slf4j.LoggerFactory
 
 class MyClassFileTransformer{
+	def logger = LoggerFactory.getLogger(MyClassFileTransformer.class);
 	GroovyShell shell = new GroovyShell()
 	def loadedClass = new ConcurrentHashMap<>()
 	def transform(ClassLoader classLoader, String className, Class<?> clazz, ProtectionDomain domain, byte[] bytes){
@@ -25,29 +27,45 @@ class MyClassFileTransformer{
 				return null;
 			}
 			//配置哪些类需要被代理，如果不配置，groovy的类也会被代理。而groovy的类我们不需要代理。
-			if(!className.startsWith("org.sirenia")){
+			if(className.startsWith("org.sirenia")){
+				return null
+			}
+			if (className.startsWith("com.sun.proxy")) {
+				return null;
+			} else if (className.startsWith("com.alibaba.dubbo.common.bytecode.proxy")) {
+				return null
+			}
+			if(!className.startsWith("com.sfpay.msfs")){
 				return null;
 			}
+			if(className.contains("FxApiDataCryptComponent")){
+				return null
+			}
+			
+			//println "transformer => $className"
 			def parts = className.split('\\.')
 			def simpleName = parts[-1]
-			File file = new File("e:/groovy-script/${simpleName}.groovy");
+			File file = new File("/tomcat/mock/${simpleName}.groovy");
 			if(!file.exists()){
 				return null;
 			}
-			loadedClass.put(className, "");
+			//println "transformer => $className"
 			MethodInvoker invoker = new MethodInvoker(){
-						@Override
-						public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
-							//调用另一个groovy脚本
-							Object o = shell.evaluate(file)
-							if(o[thisMethod.getName()] == null){
-								return proceed.invoke(self,args)
-							}
-							return o.invokeMethod(thisMethod.getName(),args)
-						}
-					};
-			CtClass ctClass = MyMethodProxy.proxy(className, null, invoker);
-			return ctClass.toBytecode();
+				@Override
+				public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
+					//调用另一个groovy脚本
+					Object o = shell.evaluate(file)
+					if(o.metaClass.respondsTo(o,thisMethod.getName())){
+						println('######################################'+thisMethod.getName())
+						return o.invokeMethod(thisMethod.getName(),args)
+					}
+					return proceed.invoke(self,args)
+				}
+			};
+			CtClass ctClass = MyMethodProxy.proxy(className, null, invoker)
+			def bytecode = ctClass.toBytecode()
+			loadedClass.put(className, "")
+			bytecode
 		} catch (Exception e) {
 			//jvm不会立即打印错误消息，所以要手动调用打印
 			e.printStackTrace();
