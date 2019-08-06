@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.sirenia.agent.util.AppClassPoolHolder;
+
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
@@ -51,13 +54,15 @@ public class JavassistProxy {
 			method.setBody(String.join("\n", body), JavassistProxy.class.getName(), "invoke");
 		}
 		contextMap.put(uid, invoker);
-		// ct.writeFile();
-		ct.toClass();
+		//ct.toClass();
+		//ct.writeFile();
+		//ct.writeFile(CtClass.class.getClassLoader().getResource(".").getFile());
 	}
 
 	public static CtClass proxy(String className, MethodFilter filter, MethodInvoker invoker)
 			throws NotFoundException, CannotCompileException, ClassNotFoundException, IOException {
-		ClassPool pool = ClassPool.getDefault();
+		//ClassPool pool = ClassPool.getDefault();
+		ClassPool pool = AppClassPoolHolder.get();
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
 		pool.appendClassPath(new LoaderClassPath(cl));
 		CtClass ct = pool.getCtClass(className);

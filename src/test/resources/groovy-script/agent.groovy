@@ -12,7 +12,9 @@ import groovy.lang.GroovyShell
 import javassist.CtClass
 import javassist.CtMethod
 import org.slf4j.LoggerFactory
-
+/*
+-javaagent:d:/git-repo/java-agent/target/java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+*/
 class MyClassFileTransformer{
 	def logger = LoggerFactory.getLogger(MyClassFileTransformer.class);
 	GroovyShell shell = new GroovyShell()
@@ -35,12 +37,12 @@ class MyClassFileTransformer{
 			} else if (className.startsWith("com.alibaba.dubbo.common.bytecode.proxy")) {
 				return null
 			}
-			if(!className.startsWith("com.sfpay.msfs")){
+			if(!className.startsWith("org.wt")){
 				return null;
 			}
-			if(className.contains("FxApiDataCryptComponent")){
+			/*if(className.contains("FxApiDataCryptComponent")){
 				return null
-			}
+			}*/
 			
 			//println "transformer => $className"
 			def parts = className.split('\\.')
@@ -49,7 +51,7 @@ class MyClassFileTransformer{
 			if(!file.exists()){
 				return null;
 			}
-			//println "transformer => $className"
+			println "transformer => $className"
 			MethodInvoker invoker = new MethodInvoker(){
 				@Override
 				public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
@@ -64,6 +66,8 @@ class MyClassFileTransformer{
 			};
 			CtClass ctClass = MyMethodProxy.proxy(className, null, invoker)
 			def bytecode = ctClass.toBytecode()
+			//ctClass.writeFile("D:/git-repo/java-agent-web/target/classes");
+			//ctClass.detach()
 			loadedClass.put(className, "")
 			bytecode
 		} catch (Exception e) {

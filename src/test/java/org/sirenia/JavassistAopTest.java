@@ -23,8 +23,34 @@ public class JavassistAopTest {
 			}
 		};
 		CtClass ct = JavassistProxy.proxy(className, null, invoker );
-		ct.toClass();
-		ct.writeFile();
+		if(ct.isFrozen()){
+			ct.defrost();
+		}
+		String name = ct.getClassFile().getSourceFile();
+		//ct.toClass();
+		ct.writeFile(CtClass.class.getClassLoader().getResource(".").getFile());
+		//ct.writeFile("d:/");
+		Dog dog = new Dog();
+		dog.shoutTwo("456");
+	}
+	@Test
+	public void test2() throws NotFoundException, CannotCompileException, IOException, ClassNotFoundException{
+		String className = "org.wt.service.impl.HelloServiceImpl";
+		MethodInvoker invoker = new MethodInvoker() {
+			@Override
+			public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
+				System.out.println("123");
+				return null;
+			}
+		};
+		CtClass ct = JavassistProxy.proxy(className, null, invoker );
+		if(ct.isFrozen()){
+			ct.defrost();
+		}
+		String name = ct.getClassFile().getSourceFile();
+		//ct.toClass();
+		ct.writeFile(CtClass.class.getClassLoader().getResource(".").getFile());
+		//ct.writeFile("d:/");
 		Dog dog = new Dog();
 		dog.shoutTwo("456");
 	}

@@ -9,6 +9,7 @@ public class Dog {
 	public <T> T shoutTwo(T t){
 		return t;
 	}
+	@Deprecated
 	public <T> List<T> getList(){
 		return null;
 	}

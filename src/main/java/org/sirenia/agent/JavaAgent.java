@@ -9,8 +9,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.sirenia.agent.groovy.GroovyScriptMethodRunner;
+import org.sirenia.agent.util.AppClassPoolHolder;
 
 import groovy.lang.GroovyObject;
+import javassist.ClassPool;
 
 public class JavaAgent implements ClassFileTransformer {
 	private GroovyScriptMethodRunner groovyRunner = new GroovyScriptMethodRunner();
@@ -20,6 +22,8 @@ public class JavaAgent implements ClassFileTransformer {
 	private Set<String> mustIgnored = new HashSet<>();
 	//private boolean loaded;
 	public JavaAgent(){
+		ClassPool pool = ClassPool.getDefault();
+		AppClassPoolHolder.set(pool);
 		groovyRunner.initGroovyClassLoader();
 		/**
 		 * 如果我们在transform中调用了Method#invoke方法，就必须忽略这个类。
