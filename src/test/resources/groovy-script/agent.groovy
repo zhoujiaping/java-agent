@@ -1,5 +1,6 @@
 import java.lang.reflect.Method
 import java.security.ProtectionDomain
+import java.util.HashSet
 import java.util.Map
 import java.util.concurrent.ConcurrentHashMap
 import org.sirenia.agent.groovy.GroovyScriptShell
@@ -20,7 +21,7 @@ class MyClassFileTransformer{
 	GroovyShell shell = new GroovyShell()
 	def loadedClass = new ConcurrentHashMap<>()
 	//需要代理的类，不要通过正则匹配大范围的类，会导致启动很慢
-	def classSet = new HashSet<>()
+	def classSet = new HashSet<>();
 	{
 		classSet.add("org.wt.web.HelloController")
 	}
