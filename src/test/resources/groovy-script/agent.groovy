@@ -19,6 +19,11 @@ class MyClassFileTransformer{
 	def logger = LoggerFactory.getLogger(MyClassFileTransformer.class);
 	GroovyShell shell = new GroovyShell()
 	def loadedClass = new ConcurrentHashMap<>()
+	//需要代理的类，不要通过正则匹配大范围的类，会导致启动很慢
+	def classSet = new HashSet<>()
+	{
+		classSet.add("org.wt.web.HelloController")
+	}
 	def transform(ClassLoader classLoader, String className, Class<?> clazz, ProtectionDomain domain, byte[] bytes){
 		try{
 			if(className == null){
@@ -32,13 +37,8 @@ class MyClassFileTransformer{
 			if(className.startsWith("org.sirenia")){
 				return null
 			}
-			if (className.startsWith("com.sun.proxy")) {
-				return null;
-			} else if (className.startsWith("com.alibaba.dubbo.common.bytecode.proxy")) {
+			if(!classSet.contains(className)){
 				return null
-			}
-			if(!className.startsWith("org.wt")){
-				return null;
 			}
 			/*if(className.contains("FxApiDataCryptComponent")){
 				return null
@@ -58,7 +58,7 @@ class MyClassFileTransformer{
 					//调用另一个groovy脚本
 					Object o = shell.evaluate(file)
 					if(o.metaClass.respondsTo(o,thisMethod.getName())){
-						println('######################################'+thisMethod.getName())
+						//println('######################################'+thisMethod.getName())
 						return o.invokeMethod(thisMethod.getName(),args)
 					}
 					return proceed.invoke(self,args)
