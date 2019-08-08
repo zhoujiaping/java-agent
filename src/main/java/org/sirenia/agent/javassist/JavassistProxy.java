@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.sirenia.agent.util.AppClassPoolHolder;
+import org.sirenia.agent.util.ClassPoolUtils;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;
@@ -23,7 +23,7 @@ public class JavassistProxy {
 	public static final String methodSuffix = "_proxy";
 	//public static final String invokerSuffix = "$invoker";
 	private static final Map<String, MethodInvoker> contextMap = new ConcurrentHashMap<>();
-
+	
 	public static void proxy(CtClass ct, MethodFilter filter, MethodInvoker invoker)
 			throws NotFoundException, CannotCompileException, ClassNotFoundException, IOException {
 		// 解冻
@@ -62,8 +62,8 @@ public class JavassistProxy {
 	public static CtClass proxy(String className, MethodFilter filter, MethodInvoker invoker)
 			throws NotFoundException, CannotCompileException, ClassNotFoundException, IOException {
 		//ClassPool pool = ClassPool.getDefault();
-		ClassPool pool = AppClassPoolHolder.get();
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
+		ClassPool pool = ClassPoolUtils.linkClassPool(cl);
 		pool.appendClassPath(new LoaderClassPath(cl));
 		CtClass ct = pool.getCtClass(className);
 		// CtClass ct = pool.get(className);

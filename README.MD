@@ -25,6 +25,17 @@
 比如代理WebappClassLoaderBase#loadClass方法会导致stackoverflow。loadClass方法调用MyMethodProxy#invoke，
 MyMethodProxy#invoke又会调用Class#forName，Class#forName又会调用WebappClassLoaderBase#loadClass。
 所以，如果需要修改classloader，请通过别的方式实现。
+7、web项目中如果有用到dubbo，可能会报错
+javassist编译错误，找不到xxx_proxy方法。
+解决办法，web项目中配置
+<aop:aspectj-autoproxy proxy-target-class="false" />
+或者<aop:aspectj-autoproxy proxy-target-class="true" />
+虽然具体细节不太清楚。
+MyMethodProxy,里面用的ClassPool，和dubbo用的ClassPool是不一样的。
+我们增强的字节码，并不会在dubbo的ClassPool中。
+dubbo拿到的对象是spring管理的bean，确实是我们增强了的。
+但是它增强时，需要读取字节码文件（class文件）。我们增强了class，但是并没有写到class文件中。
+估计是使用aop:aspectj-autoproxy会改变一些实现方式。
 
 
 
@@ -33,4 +44,3 @@ https://baijiahao.baidu.com/s?id=1593597517685646565&wfr=spider&for=pc
 【译】单元测试最佳实践
 https://www.jianshu.com/p/6f496aedd080
 
-ASSET_SNAPSHOT_2019

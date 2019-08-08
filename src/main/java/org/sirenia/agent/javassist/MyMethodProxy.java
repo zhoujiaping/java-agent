@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.sirenia.agent.util.ClassPoolUtils;
 import org.sirenia.agent.util.ClassUtil;
 import org.sirenia.agent.util.StrFmt;
 
@@ -18,7 +19,6 @@ import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.CtNewMethod;
-import javassist.LoaderClassPath;
 import javassist.NotFoundException;
 
 /**
@@ -26,8 +26,6 @@ import javassist.NotFoundException;
  */
 public class MyMethodProxy {
 	private static final Map<String, MethodInvoker> invokerMap = new ConcurrentHashMap<>();
-	private static final Map<ClassLoader, ClassPool> poolMap = new ConcurrentHashMap<>();
-
 	public static Object invoke(String uid, String className, String methodName, String parameterTypeNames, Object self,
 			Object[] args) throws Throwable {
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
@@ -106,19 +104,15 @@ public class MyMethodProxy {
 	public static CtClass proxy(String className, MethodFilter filter, MethodInvoker invoker)
 			throws NotFoundException, CannotCompileException, ClassNotFoundException, IOException {
 		ClassLoader cl = Thread.currentThread().getContextClassLoader();
-		ClassPool pool = poolMap.get(cl);
-		if(pool == null){
-			ClassLoader parent = cl.getParent();
-			pool = new ClassPool(poolMap.get(parent));
-			poolMap.put(cl, pool);
-		}
-		ClassLoader classLoader = MyMethodProxy.class.getClassLoader();
-		pool.appendClassPath(new LoaderClassPath(classLoader));
+		ClassPool pool = ClassPoolUtils.linkClassPool(cl);
+		//ClassLoader classLoader = MyMethodProxy.class.getClassLoader();
+		//pool.appendClassPath(new LoaderClassPath(classLoader));
+		//pool.appendClassPath(new LoaderClassPath(cl));
 		CtClass ct = pool.getCtClass(className);
 		// CtClass ct = pool.get(className);
 		return proxy(ct, filter, invoker);
 	};
-
+	
 	private static String wrapQuota(String text) {
 		return "\"" + text + "\"";
 	}
