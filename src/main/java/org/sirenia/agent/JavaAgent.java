@@ -14,7 +14,7 @@ import groovy.lang.GroovyObject;
 
 public class JavaAgent implements ClassFileTransformer {
 	private GroovyScriptMethodRunner groovyRunner = new GroovyScriptMethodRunner();
-	private static String groovyFile = "/tomcat/mock/agent.groovy";
+	public static String groovyFileDir = System.getProperty("user.home")+"/mock";//"/home/wt/mock/";
 	private long prevModified = 0;
 	private GroovyObject groovyObject;
 	private Set<String> mustIgnored = new HashSet<>();
@@ -36,7 +36,7 @@ public class JavaAgent implements ClassFileTransformer {
 			if(mustIgnored.contains(className)){
 				return null;
 			}
-			File file = new File(groovyFile);
+			File file = new File(groovyFileDir,"agent.groovy");
 			long lastModifyTime = file.lastModified();
 			if(prevModified<lastModifyTime){
 				prevModified = lastModifyTime;
@@ -45,14 +45,14 @@ public class JavaAgent implements ClassFileTransformer {
 			Object res = groovyObject.invokeMethod("transform", new Object[]{classLoader,className,clazz,domain,bytes});
 			return (byte[]) res;
 		} catch (Exception e1) {
-			System.out.println(className);
+			System.err.println(className);
 			e1.printStackTrace();
 			throw new RuntimeException(e1);
 		}
 	}
-    public static void    premain(String agentOps,Instrumentation inst){
+    public static void premain(String agentOps,Instrumentation inst){
     	if(agentOps!=null && !agentOps.trim().isEmpty()){
-    		groovyFile = agentOps;
+			groovyFileDir = agentOps;
     	}
         inst.addTransformer(new JavaAgent(),true);
     }
