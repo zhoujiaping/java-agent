@@ -32,7 +32,7 @@ def "invoke#invoke"(self,thisMethod,proceed,args){
 				//println("")
 				return o.invokeMethod(methodName+"#invoke",args)
 			}
-			return proceed.invoke(self,args[2])
+			return proceed.invoke(self,args)
 		}
 	}else{
 		proceed.invoke(self,args)		
