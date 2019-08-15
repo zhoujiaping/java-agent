@@ -9,6 +9,7 @@ import org.sirenia.agent.javassist.JavassistProxy
 import org.sirenia.agent.javassist.MyMethodProxy
 import org.sirenia.agent.javassist.MethodFilter
 
+import groovy.inspect.swingui.ObjectBrowser
 import groovy.lang.GroovyShell
 import javassist.CtClass
 import javassist.CtMethod
@@ -62,7 +63,7 @@ com.sfpay.msfs.util.SessionHelper
 			}
 			
 			//println "transformer => $className"
-			def parts = className.split(/./)
+			def parts = className.split(/\./)
 			def simpleName = parts[-1]
 			File file = new File(JavaAgent.groovyFileDir,"${simpleName}.groovy");
 			//对应的代理文件不存在，放行
@@ -77,20 +78,33 @@ com.sfpay.msfs.util.SessionHelper
 					//调用另一个groovy脚本
 					def o = shell.evaluate(file)
 					def methodName = thisMethod.getName()
-					//如果groovy对象有对应的方法，就执行对应的方法
-					if(o.metaClass.respondsTo(o,methodName)){
-						//println('######################################'+thisMethod.getName())
-						return o.invokeMethod(thisMethod.getName(),args)
-					//提供在代理方法中调用 目标方法 的机制
-					}else if(o.metaClass.respondsTo(o,methodName+"#invoke")){
-						//println("")
-						return o.invokeMethod(methodName+"#invoke",[self,thisMethod,proceed,args])
+					o.metaClass.methodMissing = {
+						mn,ps->
+						proceed.invoke(self,args)
 					}
-					return proceed.invoke(self,args)
+					o.invokeMethod(methodName, args)
 				}
-			};
+			}
+			def dubboInvoker = new MethodInvoker(){
+				@Override
+				public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
+					//调用另一个groovy脚本
+					def o = shell.evaluate(file)
+					def methodName = thisMethod.getName()
+					o.metaClass.methodMissing = {
+						mn,ps->
+						proceed.invoke(self,args)
+					}
+					o.invokeMethod(methodName, [self,thisMethod,proceed,args])
+				}
+			}
 			//使用javassist工具，增强字节码，进行代理
-			def ctClass = MyMethodProxy.proxy(className, null, invoker)
+			def ctClass = null
+			if(simpleName=="InvokerInvocationHandler"){
+				def ctClass = MyMethodProxy.proxy(className, null, dubboInvoker)
+			}else{
+				def ctClass = MyMethodProxy.proxy(className, null, invoker)
+			}
 			def bytecode = ctClass.toBytecode()
 			//ctClass.writeFile("D:/git-repo/java-agent-web/target/classes");
 			//ctClass.detach()
