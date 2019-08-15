@@ -14,7 +14,7 @@ import javassist.CtClass
 import javassist.CtMethod
 import org.sirenia.agent.JavaAgent
 /*
--javaagent:d:/git-repo/java-agent/target/java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+-javaagent:d:/git-repo/java-agent/target/java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar=/tomcat/groovy
 -javaagent:/home/wt/IdeaProjects/java-agent/target/java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 
 */
@@ -25,14 +25,20 @@ class MyClassFileTransformer{
 	//记录已代理过的类名
 	def loadedClass = new ConcurrentHashMap<>()
 	//需要代理的类，不要通过正则匹配大范围的类，会导致启动很慢
-	def classSet = new HashSet<>();
-	{
-		classSet.add("org.wt.web.HelloController")
-		classSet.add("org.wt.service.impl.HelloServiceImpl")
-		//通过代理dubbo的InvokerInvocationHandler，实现对远程dubbo服务的代理
-		classSet.add("com.alibaba.dubbo.rpc.proxy.InvokerInvocationHandler")
-		//兼容dubbo的代理
-		classSet.add("com.alibaba.dubbo.common.bytecode.ClassGenerator")
+	def classSet = new HashSet();
+	MyClassFileTransformer(){
+		init()
+	}
+	def init(){
+		def classes = """
+com.sfpay.msfs.interceptor.list.AppBizInterceptor
+com.sfpay.msfs.web.ssh.FinancialAppController
+com.sfpay.msfs.web.ssh.FxController
+com.sfpay.msfs.util.SessionHelper
+"""
+		classSet = classes.trim().split(/\s+/) as HashSet
+		classSet << "com.alibaba.dubbo.rpc.proxy.InvokerInvocationHandler" //通过代理dubbo的InvokerInvocationHandler，实现对远程dubbo服务的代理
+		classSet << "com.alibaba.dubbo.common.bytecode.ClassGenerator" //兼容dubbo的代理
 	}
 	def transform(ClassLoader classLoader, String className, Class<?> clazz, ProtectionDomain domain, byte[] bytes){
 		//println("transformer000 => ${className}")
@@ -56,7 +62,7 @@ class MyClassFileTransformer{
 			}
 			
 			//println "transformer => $className"
-			def parts = className.split('\\.')
+			def parts = className.split(/./)
 			def simpleName = parts[-1]
 			File file = new File(JavaAgent.groovyFileDir,"${simpleName}.groovy");
 			//对应的代理文件不存在，放行
