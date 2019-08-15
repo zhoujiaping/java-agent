@@ -1,5 +1,6 @@
-import groovy.lang.GroovyShell
 import org.sirenia.agent.JavaAgent
+import org.sirenia.agent.util.LastModCacheUtil
+
 /**
 实现远程dubbo服务的代理。远程服务即使没有注册到注册中心也可以。
 */
@@ -17,11 +18,7 @@ org.wt.service.HelloService
 org.wt.service.HelloService
 """.trim().split(/\s+/) as HashSet
 shell = new GroovyShell()
-def invoke(name,params){
-	def invokerSelf = params[0]
-	def invokerThisMethod = params[1]
-	def invokerProceed = params[2]
-	def invokerArgs = params[3]
+def "invoke#invoke"(self,thisMethod,proceed,args){
 	def serviceTarget = args[0]
 	def serviceMethod = args[1]
 	def serviceArgs = args[2]
@@ -32,21 +29,25 @@ def invoke(name,params){
 		def className = matchedInterface.getName()
 		def parts = className.split(/\./)
 		def simpleName = parts[-1]
-		File file = new File(JavaAgent.groovyFileDir,"/${simpleName}.groovy");
+		File file = new File(JavaAgent.groovyFileDir,"/${simpleName}.groovy")
 		if(!file.exists()){
 			println("${simpleName}.groovy not found")
-			invokerProceed.invoke(invokerSelf,invokerArgs)
+			proceed.invoke(self,args)
 		}else{
-			def o = shell.evaluate(file)
+			def proxy = LastModCacheUtil.get(file.getAbsolutePath(),()->{
+				shell.evaluate(file)
+			})
 			def methodName = serviceMethod.getName()
-			o.metaClass.methodMissing = {
-				mn,ps->
-				invokerProceed.invoke(invokerSelf,invokerArgs)
+			if(proxy.metaClass.respondsTo(proxy,methodName)){
+				proxy.invokeMethod(methodName, serviceArgs)
+			}else if(proxy.metaClass.respondsTo(proxy,methodName+"#invoke")){
+				proxy.invokeMethod(methodName+"#invoke", args)
+			}else{
+				proceed.invoke(self, args)
 			}
-			o.invokeMethod(methodName, serviceArgs)
 		}
 	}else{
-		invokerProceed.invoke(invokerSelf,invokerArgs)
+		proceed.invoke(self,args)
 	}
 }
 this

@@ -1,19 +1,10 @@
 import java.lang.reflect.Method
 import java.security.ProtectionDomain
-import java.util.HashSet
-import java.util.Map
 import java.util.concurrent.ConcurrentHashMap
-import org.sirenia.agent.groovy.GroovyScriptShell
 import org.sirenia.agent.javassist.MethodInvoker
-import org.sirenia.agent.javassist.JavassistProxy
 import org.sirenia.agent.javassist.MyMethodProxy
-import org.sirenia.agent.javassist.MethodFilter
-
-import groovy.inspect.swingui.ObjectBrowser
-import groovy.lang.GroovyShell
-import javassist.CtClass
-import javassist.CtMethod
 import org.sirenia.agent.JavaAgent
+import org.sirenia.agent.util.LastModCacheUtil
 /*
 -javaagent:d:/git-repo/java-agent/target/java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar=/tomcat/groovy
 -javaagent:/home/wt/IdeaProjects/java-agent/target/java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar
@@ -26,16 +17,18 @@ class MyClassFileTransformer{
 	//记录已代理过的类名
 	def loadedClass = new ConcurrentHashMap<>()
 	//需要代理的类，不要通过正则匹配大范围的类，会导致启动很慢
-	def classSet = new HashSet();
+	def classSet = new HashSet()
 	MyClassFileTransformer(){
 		init()
 	}
 	def init(){
+        println "init agent"
 		def classes = """
 com.sfpay.msfs.interceptor.list.AppBizInterceptor
 com.sfpay.msfs.web.ssh.FinancialAppController
 com.sfpay.msfs.web.ssh.FxController
 com.sfpay.msfs.util.SessionHelper
+org.wt.service.impl.HelloServiceImpl
 """
 		classSet = classes.trim().split(/\s+/) as HashSet
 		classSet << "com.alibaba.dubbo.rpc.proxy.InvokerInvocationHandler" //通过代理dubbo的InvokerInvocationHandler，实现对远程dubbo服务的代理
@@ -45,13 +38,13 @@ com.sfpay.msfs.util.SessionHelper
 		//println("transformer000 => ${className}")
 		try{    //类名有可能是null
 			if(className == null){
-				return null;
+				return null
 			}
 			//类名使用/分隔的，替换成.分隔
-			className = className.replace("/", ".");
+			className = className.replace("/", ".")
 			//已经代理过，不需要再代理，直接返回null
 			if(loadedClass.containsKey(className)){
-				return null;
+				return null
 			}
 			//对java-agent项目中的类直接放行，不代理
 			if(className.startsWith("org.sirenia")){
@@ -65,46 +58,32 @@ com.sfpay.msfs.util.SessionHelper
 			//println "transformer => $className"
 			def parts = className.split(/\./)
 			def simpleName = parts[-1]
-			File file = new File(JavaAgent.groovyFileDir,"${simpleName}.groovy");
+			File file = new File(JavaAgent.groovyFileDir,"${simpleName}.groovy")
 			//对应的代理文件不存在，放行
 			if(!file.exists()){
 				println("${simpleName}.groovy not found")
-				return null;
+				return null
 			}
 			println "transformer => $className"
 			def invoker = new MethodInvoker(){
 				@Override
-				public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
+				def invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
 					//调用另一个groovy脚本
-					def o = shell.evaluate(file)
+					def proxy = LastModCacheUtil.get(file.getAbsolutePath(),()->{
+						shell.evaluate(file)
+					})
 					def methodName = thisMethod.getName()
-					o.metaClass.methodMissing = {
-						mn,ps->
-						proceed.invoke(self,args)
-					}
-					o.invokeMethod(methodName, args)
-				}
-			}
-			def dubboInvoker = new MethodInvoker(){
-				@Override
-				public Object invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
-					//调用另一个groovy脚本
-					def o = shell.evaluate(file)
-					def methodName = thisMethod.getName()
-					o.metaClass.methodMissing = {
-						mn,ps->
-						proceed.invoke(self,args)
-					}
-					o.invokeMethod(methodName, [self,thisMethod,proceed,args])
+                    if(proxy.metaClass.respondsTo(proxy,methodName)){
+						proxy.invokeMethod(methodName, args)
+                    }else if(proxy.metaClass.respondsTo(proxy,methodName+"#invoke")){
+						proxy.invokeMethod(methodName+"#invoke", [self,thisMethod,proceed,args])
+                    }else{
+                        proceed.invoke(self, args)
+                    }
 				}
 			}
 			//使用javassist工具，增强字节码，进行代理
-			def ctClass = null
-			if(simpleName=="InvokerInvocationHandler"){
-				def ctClass = MyMethodProxy.proxy(className, null, dubboInvoker)
-			}else{
-				def ctClass = MyMethodProxy.proxy(className, null, invoker)
-			}
+			def	ctClass = MyMethodProxy.proxy(className, null, invoker)
 			def bytecode = ctClass.toBytecode()
 			//ctClass.writeFile("D:/git-repo/java-agent-web/target/classes");
 			//ctClass.detach()
@@ -113,8 +92,8 @@ com.sfpay.msfs.util.SessionHelper
 			bytecode
 		} catch (Exception e) {
 			//jvm不会立即打印错误消息，所以要手动调用打印
-			e.printStackTrace();
-			throw new RuntimeException(e);
+			e.printStackTrace()
+			throw new RuntimeException(e)
 		}
 	}
 }
