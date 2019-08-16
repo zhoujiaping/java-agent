@@ -73,13 +73,16 @@ org.wt.service.impl.HelloServiceImpl
 						shell.evaluate(file)
 					})
 					def methodName = thisMethod.getName()
-                    if(proxy.metaClass.respondsTo(proxy,methodName)){
-						proxy.invokeMethod(methodName, args)
-                    }else if(proxy.metaClass.respondsTo(proxy,methodName+"#invoke")){
-						proxy.invokeMethod(methodName+"#invoke", [self,thisMethod,proceed,args])
+                    if(proxy.metaClass.respondsTo(proxy,methodName,*args)){
+						proxy."$methodName"(*args)
                     }else{
-                        proceed.invoke(self, args)
-                    }
+						def ivkArgs = [self,thisMethod,proceed,args]
+						if(proxy.metaClass.respondsTo(proxy,"${methodName}#invoke",*ivkArgs)){
+							proxy."${methodName}#invoke"(*ivkArgs)
+						}else{
+							proceed.invoke(self, args)
+						}
+					}
 				}
 			}
 			//使用javassist工具，增强字节码，进行代理

@@ -38,10 +38,10 @@ def "invoke#invoke"(self,thisMethod,proceed,args){
 				shell.evaluate(file)
 			})
 			def methodName = serviceMethod.getName()
-			if(proxy.metaClass.respondsTo(proxy,methodName)){
-				proxy.invokeMethod(methodName, serviceArgs)
-			}else if(proxy.metaClass.respondsTo(proxy,methodName+"#invoke")){
-				proxy.invokeMethod(methodName+"#invoke", args)
+			if(proxy.metaClass.respondsTo(proxy,methodName,*serviceArgs)){
+				proxy."$methodName"(*serviceArgs)
+			}else if(proxy.metaClass.respondsTo(proxy,"${methodName}#invoke",*args)){
+				proxy."${methodName}#invoke"(*args)
 			}else{
 				proceed.invoke(self, args)
 			}
