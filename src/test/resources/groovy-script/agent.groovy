@@ -16,7 +16,6 @@ class MyClassFileTransformer{
 	def shell = new GroovyShell()
 	//记录已代理过的类名
 	def loadedClass = new ConcurrentHashMap<>()
-	//需要代理的类，不要通过正则匹配大范围的类，会导致启动很慢
 	def classSet = new HashSet()
 	MyClassFileTransformer(){
 		init()
@@ -50,10 +49,10 @@ com.sfpay.msfs.util.SessionHelper
 			if(className.startsWith("org.sirenia")){
 				return null
 			}
-			//这里配置 spring bean的正则表达式，这样在mock spring bean时，不需要重启应用。
-			def isSpringBean = className ==~ /org.wt.*([sS]ervice|[cC]omponent|Controller).*/
+			//这里配置class name regexp to proxy的正则表达式，这样在mock时，不需要重启应用。
+			def matchReg = className ==~ /org.wt.*([sS]ervice|[cC]omponent|Controller).*/
 			//不需要代理的类，放行
-			def needProxy = isSpringBean || classSet.contains(className)
+			def needProxy = matchReg || classSet.contains(className)
 			if(!needProxy){
 				//默认类名匹配以下正则的进行代理
 				return null
