@@ -37,7 +37,9 @@ dubbo拿到的对象是spring管理的bean，确实是我们增强了的。
 但是它增强时，需要读取字节码文件（class文件）。我们增强了class，但是并没有写到class文件中。
 估计是使用aop:aspectj-autoproxy会改变一些实现方式。
 
-
+8、已知异常及解决办法
+异常：has illegal modifiers
+解决办法：确认javassist包的版本和被代理的包依赖的javassist版本兼容。
 
 软件开发和测试的 30 个最佳实践
 https://baijiahao.baidu.com/s?id=1593597517685646565&wfr=spider&for=pc
