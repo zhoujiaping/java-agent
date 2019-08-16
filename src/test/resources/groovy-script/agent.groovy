@@ -28,9 +28,9 @@ com.sfpay.msfs.interceptor.list.AppBizInterceptor
 com.sfpay.msfs.web.ssh.FinancialAppController
 com.sfpay.msfs.web.ssh.FxController
 com.sfpay.msfs.util.SessionHelper
-org.wt.service.impl.HelloServiceImpl
+//org.wt.service.impl.HelloServiceImpl
 """
-		classSet = classes.trim().split(/\s+/) as HashSet
+		classSet = classes.trim().split(/\s+/).findAll{!it.endsWith("//")} as HashSet
 		classSet << "com.alibaba.dubbo.rpc.proxy.InvokerInvocationHandler" //通过代理dubbo的InvokerInvocationHandler，实现对远程dubbo服务的代理
 		classSet << "com.alibaba.dubbo.common.bytecode.ClassGenerator" //兼容dubbo的代理
 	}
@@ -50,25 +50,27 @@ org.wt.service.impl.HelloServiceImpl
 			if(className.startsWith("org.sirenia")){
 				return null
 			}
+			//这里配置 spring bean的正则表达式，这样在mock spring bean时，不需要重启应用。
+			def isSpringBean = className ==~ /org.wt.*([sS]ervice|[cC]omponent|Controller).*/
 			//不需要代理的类，放行
-			if(!classSet.contains(className)){
+			def needProxy = isSpringBean || classSet.contains(className)
+			if(!needProxy){
+				//默认类名匹配以下正则的进行代理
 				return null
 			}
-			
 			//println "transformer => $className"
 			def parts = className.split(/\./)
 			def simpleName = parts[-1]
 			File file = new File(JavaAgent.groovyFileDir,"${simpleName}.groovy")
-			//对应的代理文件不存在，放行
-			if(!file.exists()){
-				println("${simpleName}.groovy not found")
-				return null
-			}
 			println "transformer => $className"
+			//即使对应的代理文件不存在，也进行代理，这样添加文件的时候，不需要重启。
 			def invoker = new MethodInvoker(){
 				@Override
 				def invoke(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
 					//调用另一个groovy脚本
+					if(!file.exists()){
+						return proceed.invoke(self, args)
+					}
 					def proxy = LastModCacheUtil.get(file.getAbsolutePath(),()->{
 						shell.evaluate(file)
 					})
