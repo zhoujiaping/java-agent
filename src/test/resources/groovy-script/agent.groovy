@@ -5,15 +5,17 @@ import org.sirenia.agent.javassist.MethodInvoker
 import org.sirenia.agent.javassist.MyMethodProxy
 import org.sirenia.agent.JavaAgent
 import org.sirenia.agent.util.LastModCacheUtil
+import org.codehaus.groovy.control.CompilerConfiguration
+
 /*
 -javaagent:d:/git-repo/java-agent/target/java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar=/tomcat/groovy
 -javaagent:/home/wt/IdeaProjects/java-agent/target/java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 
 */
+//@groovy.util.logging.Slf4j
 class MyClassFileTransformer{
 	//def logger = LoggerFactory.getLogger(MyClassFileTransformer.class);
 	//执行groovy脚本的shell
-	def shell = new GroovyShell()
 	//记录已代理过的类名
 	def loadedClass = new ConcurrentHashMap<>()
 	def classSet = new HashSet()
@@ -21,19 +23,23 @@ class MyClassFileTransformer{
 		init()
 	}
 	def init(){
-        println "init agent"
+		println "#"*10+"init agent"+"#"*10
 		def classes = """
-com.sfpay.msfs.interceptor.list.AppBizInterceptor
-com.sfpay.msfs.web.ssh.FinancialAppController
-com.sfpay.msfs.web.ssh.FxController
-com.sfpay.msfs.util.SessionHelper
-//org.wt.service.impl.HelloServiceImpl
+org.wt.service.impl.HelloServiceImpl
 """
 		classSet = classes.trim().split(/\s+/).findAll{!it.endsWith("//")} as HashSet
 		classSet << "com.alibaba.dubbo.rpc.proxy.InvokerInvocationHandler" //通过代理dubbo的InvokerInvocationHandler，实现对远程dubbo服务的代理
 		classSet << "com.alibaba.dubbo.common.bytecode.ClassGenerator" //兼容dubbo的代理
 	}
 	def transform(ClassLoader classLoader, String className, Class<?> clazz, ProtectionDomain domain, byte[] bytes){
+		if(classLoader.getClass().getName().contains('GroovyClassLoader')){
+			return null
+		}
+		if(className in loadedClass){
+			return null
+		}
+		
+		//return null
 		//println("transformer000 => ${className}")
 		try{    //类名有可能是null
 			if(className == null){
@@ -50,7 +56,7 @@ com.sfpay.msfs.util.SessionHelper
 				return null
 			}
 			//这里配置class name regexp to proxy的正则表达式，这样在mock时，不需要重启应用。
-			def matchReg = className ==~ /org.wt.*([sS]ervice|[cC]omponent|Controller).*/
+			def matchReg = className ==~ /org.wt.*(Service|Component|Controller).*/
 			//不需要代理的类，放行
 			def needProxy = matchReg || classSet.contains(className)
 			if(!needProxy){
@@ -71,12 +77,16 @@ com.sfpay.msfs.util.SessionHelper
 						return proceed.invoke(self, args)
 					}
 					def proxy = LastModCacheUtil.get(file.getAbsolutePath(),()->{
-						shell.evaluate(file)
+						//dont use GroovyShell, becuase it can not use classes in your project
+						def config = new CompilerConfiguration();
+						config.setSourceEncoding("UTF-8");
+						def groovyClassLoader = new GroovyClassLoader(classLoader, config);
+						groovyClassLoader.parseClass(file).newInstance()
 					})
 					def methodName = thisMethod.getName()
-                    if(proxy.metaClass.respondsTo(proxy,methodName,*args)){
+                    			if(proxy.metaClass.respondsTo(proxy,methodName,*args)){
 						proxy."$methodName"(*args)
-                    }else{
+                   			}else{
 						def ivkArgs = [self,thisMethod,proceed,args]
 						if(proxy.metaClass.respondsTo(proxy,"${methodName}#invoke",*ivkArgs)){
 							proxy."${methodName}#invoke"(*ivkArgs)
@@ -87,7 +97,7 @@ com.sfpay.msfs.util.SessionHelper
 				}
 			}
 			//使用javassist工具，增强字节码，进行代理
-			def	ctClass = MyMethodProxy.proxy(className, null, invoker)
+			def ctClass = MyMethodProxy.proxy(className, null, invoker)
 			def bytecode = ctClass.toBytecode()
 			//ctClass.writeFile("D:/git-repo/java-agent-web/target/classes");
 			//ctClass.detach()

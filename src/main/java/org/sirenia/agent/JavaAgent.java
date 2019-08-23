@@ -1,6 +1,7 @@
 package org.sirenia.agent;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
@@ -16,10 +17,19 @@ public class JavaAgent implements ClassFileTransformer {
 	private GroovyScriptMethodRunner groovyRunner = new GroovyScriptMethodRunner();
 	public static String groovyFileDir = System.getProperty("user.home")+"/mock";//"/home/wt/mock/";
 	private long prevModified = 0;
-	private GroovyObject groovyObject;
+	private volatile GroovyObject groovyObject;
 	private Set<String> mustIgnored = new HashSet<>();
-	public JavaAgent(){
+	public JavaAgent()  {
 		groovyRunner.initGroovyClassLoader();
+		File file = new File(groovyFileDir,"agent.groovy");
+		if(!file.exists()){
+			throw new RuntimeException("file not found: "+file.getAbsolutePath());
+		}
+		try {
+			groovyObject = groovyRunner.loadGroovyScript(file);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 		/**
 		 * 如果我们在transform中调用了Method#invoke方法，就必须忽略这个类。
 		 * 否则执行Method#invoke要去加载MethodHandleImpl，加载MethodHandleImpl又要去执行Method#invoke，死循环了。
@@ -36,12 +46,7 @@ public class JavaAgent implements ClassFileTransformer {
 			if(mustIgnored.contains(className)){
 				return null;
 			}
-			File file = new File(groovyFileDir,"agent.groovy");
-			long lastModifyTime = file.lastModified();
-			if(prevModified<lastModifyTime){
-				prevModified = lastModifyTime;
-				groovyObject = groovyRunner.loadGroovyScript(file);
-			}
+			//System.out.println("groobyObject="+groovyObject);
 			Object res = groovyObject.invokeMethod("transform", new Object[]{classLoader,className,clazz,domain,bytes});
 			return (byte[]) res;
 		} catch (Exception e1) {
