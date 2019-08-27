@@ -59,14 +59,11 @@ public class JavassistProxy {
 		//ct.writeFile(CtClass.class.getClassLoader().getResource(".").getFile());
 	}
 
-	public static CtClass proxy(String className, MethodFilter filter, MethodInvoker invoker)
+	public static CtClass proxy(ClassLoader cl,String className, MethodFilter filter, MethodInvoker invoker)
 			throws NotFoundException, CannotCompileException, ClassNotFoundException, IOException {
-		//ClassPool pool = ClassPool.getDefault();
-		ClassLoader cl = Thread.currentThread().getContextClassLoader();
 		ClassPool pool = ClassPoolUtils.linkClassPool(cl);
 		pool.appendClassPath(new LoaderClassPath(cl));
 		CtClass ct = pool.getCtClass(className);
-		// CtClass ct = pool.get(className);
 		proxy(ct, filter, invoker);
 		return ct;
 	};

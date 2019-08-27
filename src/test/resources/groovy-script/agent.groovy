@@ -1,48 +1,37 @@
 import java.lang.reflect.Method
 import java.security.ProtectionDomain
 import java.util.concurrent.ConcurrentHashMap
-import org.sirenia.agent.javassist.MethodInvoker
-import org.sirenia.agent.javassist.MyMethodProxy
+
+import org.sirenia.agent.AssistProxy
+import org.sirenia.agent.AssistInvoker
 import org.sirenia.agent.JavaAgent
-import org.sirenia.agent.util.LastModCacheUtil
+//import org.sirenia.agent.util.LastModCacheUtil
 import org.codehaus.groovy.control.CompilerConfiguration
 
 /*
 -javaagent:d:/git-repo/java-agent/target/java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar=/tomcat/groovy
 -javaagent:/home/wt/IdeaProjects/java-agent/target/java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar
-
 */
-//@groovy.util.logging.Slf4j
+//TODO
 class MyClassFileTransformer{
-	//def logger = LoggerFactory.getLogger(MyClassFileTransformer.class);
-	//执行groovy脚本的shell
 	//记录已代理过的类名
 	def loadedClass = new ConcurrentHashMap()
 	def classSet = new HashSet()
+	def matchReg = /org.wt.*(Mapper|Service|Component|Controller).*/
+	def classes = """
+org.wt.util.CryptUtils
+org.wt.model.User
+"""
 	MyClassFileTransformer(){
 		init()
 	}
 	def init(){
 		println "#"*10+"init agent"+"#"*10
-		def classes = """
-org.wt.util.CryptUtils
-org.wt.model.User
-"""
 		classSet = classes.trim().split(/\s+/).findAll{!it.endsWith("//")} as HashSet
-		classSet << "com.alibaba.dubbo.rpc.proxy.InvokerInvocationHandler" //通过代理dubbo的InvokerInvocationHandler，实现对远程dubbo服务的代理
+		//classSet << "com.alibaba.dubbo.rpc.proxy.InvokerInvocationHandler" //通过代理dubbo的InvokerInvocationHandler，实现对远程dubbo服务的代理
 		classSet << "com.alibaba.dubbo.common.bytecode.ClassGenerator" //兼容dubbo的代理
 	}
 	def transform(ClassLoader classLoader, String className, Class<?> clazz, ProtectionDomain domain, byte[] bytes){
-		try{
-			return doTransform(classLoader, className)
-		} catch (Exception e) {
-			//jvm不会立即打印错误消息，所以要手动调用打印
-			e.printStackTrace()
-			throw new RuntimeException(e)
-		}
-	}
-
-	private byte[] doTransform(ClassLoader classLoader, String className) {
 		if (classLoader.getClass().getName().contains('GroovyClassLoader')) {
 			return null
 		}
@@ -64,18 +53,51 @@ org.wt.model.User
 			return null
 		}
 		//这里配置class name regexp to proxy的正则表达式，这样在mock时，不需要重启应用。
-		def matchReg = className ==~ /org.wt.*(Mapper|Service|Component|Controller).*/
+		def matchRes = className ==~ matchReg
 		//不需要代理的类，放行
-		def needProxy = matchReg || classSet.contains(className)
-		if (!needProxy) {
-			//默认类名匹配以下正则的进行代理
+		if (!matchRes && !classSet.contains(className)) {
 			return null
 		}
+		loadedClass.put(className, "")
 		//println "transformer => $className"
 		def parts = className.split(/\./)
 		def simpleName = parts[-1]
 		File file = new File(JavaAgent.groovyFileDir, "${simpleName}.groovy")
+		if(!file.exists()){
+			return null
+		}
 		println "transformer => $className"
+		
+		def config = new CompilerConfiguration()
+		config.setSourceEncoding("UTF-8")
+		def groovyClassLoader = new GroovyClassLoader(classLoader, config)
+		def proxy = groovyClassLoader.parseClass(file).newInstance()
+		
+		//每个类加载器，使用
+		def ivk = new AssistInvoker(){
+			Object invoke(Class<?> selfClass,Object self,String method,Class<?>[] types,Object[] args){
+				println "ivk=====> $selfClass,$method,$args"
+				Method thisMethod = selfClass.getDeclaredMethod(method, types);
+				Method proceed = selfClass.getDeclaredMethod(method+AssistProxy.methodSuffix, types);
+				if(!proceed.isAccessible()){
+					proceed.setAccessible(true);
+				}
+				if (proxy.metaClass.respondsTo(proxy, method, *args)) {
+					proxy."$method"(*args)
+				} else {
+					def ivkArgs = [self, thisMethod, proceed, args]
+					if (proxy.metaClass.respondsTo(proxy, "${method}#invoke", *ivkArgs)) {
+						proxy."${method}#invoke"(*ivkArgs)
+					}else {
+						proceed.invoke(self, args)
+					}
+				}
+				//super.invoke(selfClass,self,method,types,args)
+			}
+		}
+		def ctClass = AssistProxy.proxy(classLoader,className,ivk)
+		
+		/*
 		//即使对应的代理文件不存在，也进行代理，这样添加文件的时候，不需要重启。
 		def invoker = new MethodInvoker() {
 			@Override
@@ -107,11 +129,12 @@ org.wt.model.User
 			}
 		}
 		//使用javassist工具，增强字节码，进行代理
-		def ctClass = MyMethodProxy.proxy(className, null, invoker)
+		
+		def ctClass = MyMethodProxy.proxy(classLoader,className, null, invoker)*/
 		def bytecode = ctClass.toBytecode()
 		//ctClass.writeFile("D:/git-repo/java-agent-web/target/classes");
 		//ctClass.detach()
-		loadedClass.put(className, "")
+		
 		//println("proxy ${simpleName}.groovy")
 		bytecode
 	}

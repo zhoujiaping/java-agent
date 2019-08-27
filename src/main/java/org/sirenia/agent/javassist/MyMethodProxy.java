@@ -26,9 +26,8 @@ import javassist.NotFoundException;
  */
 public class MyMethodProxy {
 	private static final Map<String, MethodInvoker> invokerMap = new ConcurrentHashMap<>();
-	public static Object invoke(String uid, String className, String methodName, String parameterTypeNames, Object self,
+	public static Object invoke(ClassLoader cl,String uid, String className, String methodName, String parameterTypeNames, Object self,
 			Object[] args) throws Throwable {
-		ClassLoader cl = Thread.currentThread().getContextClassLoader();
 		Class<?> selfClass = Class.forName(className,true,cl);
 		Method thisMethod = null;
 		Method proceed = null;
@@ -79,16 +78,17 @@ public class MyMethodProxy {
 			body.add("{");
 			if (isStatic) {
 				body.add(
-						"return ($r)${methodProxyName}.invoke(${uid},${className},${methodName},${parameterTypes},null,$args);");
+						"return ($r)${methodProxyName}.invoke(${className0}.class.getClassLoader(),${uid},${className},${methodName},${parameterTypes},null,$args);");
 			} else {
 				body.add(
-						"return ($r)${methodProxyName}.invoke(${uid},${className},${methodName},${parameterTypes},$0,$args);");
+						"return ($r)${methodProxyName}.invoke(${className0}.class.getClassLoader(),${uid},${className},${methodName},${parameterTypes},$0,$args);");
 			}
 			body.add("}");
 			String bodyString = String.join("\n", body);
 			Map<String, Object> variables = new HashMap<>();
 			variables.put("methodProxyName", methodProxyName);
 			variables.put("uid", wrapQuota(uid));
+			variables.put("className0", ct.getName());
 			variables.put("className", wrapQuota(ct.getName()));
 			variables.put("methodName", wrapQuota(methodName));
 			variables.put("parameterTypes", wrapQuota(parameterTypes));
@@ -101,16 +101,21 @@ public class MyMethodProxy {
 		return ct;
 	}
 
-	public static CtClass proxy(String className, MethodFilter filter, MethodInvoker invoker)
+	public static CtClass proxy(ClassLoader cl,String className, MethodFilter filter, MethodInvoker invoker)
 			throws NotFoundException, CannotCompileException, ClassNotFoundException, IOException {
-		ClassLoader cl = Thread.currentThread().getContextClassLoader();
 		ClassPool pool = ClassPoolUtils.linkClassPool(cl);
 		//ClassLoader classLoader = MyMethodProxy.class.getClassLoader();
 		//pool.appendClassPath(new LoaderClassPath(classLoader));
 		//pool.appendClassPath(new LoaderClassPath(cl));
-		CtClass ct = pool.getCtClass(className);
-		// CtClass ct = pool.get(className);
-		return proxy(ct, filter, invoker);
+		Object o = null;
+		CtClass ct = null;
+		try{
+			o = pool.getCtClass(className);
+			ct = (CtClass) o; 
+			return proxy(ct, filter, invoker);
+		}catch(Exception e){
+			throw new RuntimeException(e);
+		}
 	};
 	
 	private static String wrapQuota(String text) {

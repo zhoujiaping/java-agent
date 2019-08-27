@@ -11,6 +11,7 @@ import org.sirenia.agent.util.ClassPoolUtils;
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
+import javassist.LoaderClassPath;
 import javassist.NotFoundException;
 
 public class JavassistAopTest {
@@ -25,7 +26,7 @@ public class JavassistAopTest {
 				return null;
 			}
 		};
-		CtClass ct = JavassistProxy.proxy(className, null, invoker );
+		CtClass ct = JavassistProxy.proxy(this.getClass().getClassLoader(),className, null, invoker );
 		if(ct.isFrozen()){
 			ct.defrost();
 		}
@@ -46,7 +47,7 @@ public class JavassistAopTest {
 				return null;
 			}
 		};
-		CtClass ct = JavassistProxy.proxy(className, null, invoker );
+		CtClass ct = JavassistProxy.proxy(this.getClass().getClassLoader(),className, null, invoker );
 		if(ct.isFrozen()){
 			ct.defrost();
 		}
@@ -56,5 +57,18 @@ public class JavassistAopTest {
 		//ct.writeFile("d:/");
 		Dog dog = new Dog();
 		dog.shoutTwo("456");
+	}
+	@Test
+	public void test3() throws Exception{
+		ClassLoader cl = this.getClass().getClassLoader();
+		ClassPool pool = new ClassPool();
+		pool.appendClassPath(new LoaderClassPath(cl));
+		CtClass ct = pool.getCtClass("java.lang.String");
+		
+		cl = this.getClass().getClassLoader().getParent();
+		//this.getClass().getClassLoader().getSystemClassLoader();
+		pool =  new ClassPool();
+		pool.appendClassPath(new LoaderClassPath(cl));
+		ct = pool.getCtClass("java.lang.String");
 	}
 }

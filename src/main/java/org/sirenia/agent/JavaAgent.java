@@ -1,7 +1,6 @@
 package org.sirenia.agent;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
@@ -16,8 +15,7 @@ import groovy.lang.GroovyObject;
 public class JavaAgent implements ClassFileTransformer {
 	private GroovyScriptMethodRunner groovyRunner = new GroovyScriptMethodRunner();
 	public static String groovyFileDir = System.getProperty("user.home")+"/mock";//"/home/wt/mock/";
-	private long prevModified = 0;
-	private volatile GroovyObject groovyObject;
+	private GroovyObject groovyObject;
 	private Set<String> mustIgnored = new HashSet<>();
 	public JavaAgent()  {
 		groovyRunner.initGroovyClassLoader();
@@ -46,7 +44,6 @@ public class JavaAgent implements ClassFileTransformer {
 			if(mustIgnored.contains(className)){
 				return null;
 			}
-			//System.out.println("groobyObject="+groovyObject);
 			Object res = groovyObject.invokeMethod("transform", new Object[]{classLoader,className,clazz,domain,bytes});
 			return (byte[]) res;
 		} catch (Exception e1) {
