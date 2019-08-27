@@ -12,7 +12,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="Maven: org.javassist:javassist:3.23.1-GA" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.javassist:javassist:3.23.1-GA" level="project" />
     <orderEntry type="library" name="Maven: org.codehaus.groovy:groovy:3.0.0-beta-1" level="project" />
     <orderEntry type="library" name="Maven: org.codehaus.groovy:groovy-ant:3.0.0-beta-1" level="project" />
     <orderEntry type="library" name="Maven: org.apache.ant:ant:1.10.5" level="project" />
@@ -52,10 +52,5 @@
     <orderEntry type="library" scope="RUNTIME" name="Maven: org.testng:testng:6.14.3" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: com.beust:jcommander:1.72" level="project" />
     <orderEntry type="library" name="Maven: org.codehaus.groovy:groovy-xml:3.0.0-beta-1" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.apache.tomcat.embed:tomcat-embed-core:8.5.42" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.apache.tomcat:tomcat-annotations-api:8.5.42" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.apache.tomcat.embed:tomcat-embed-jasper:8.5.42" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.apache.tomcat.embed:tomcat-embed-el:8.5.42" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.eclipse.jdt:ecj:3.12.3" level="project" />
   </component>
 </module>

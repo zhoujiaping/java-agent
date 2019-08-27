@@ -1,4 +1,4 @@
-package org.sirenia.agent.util;
+package org.sirenia.agent;
 
 import java.io.File;
 import java.util.Map;

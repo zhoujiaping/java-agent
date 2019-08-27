@@ -1,7 +1,6 @@
 package org.sirenia.agent;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
@@ -9,24 +8,29 @@ import java.security.ProtectionDomain;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.sirenia.agent.groovy.GroovyScriptMethodRunner;
+import groovy.lang.GroovyClassLoader;
+import org.codehaus.groovy.control.CompilerConfiguration;
 
 import groovy.lang.GroovyObject;
 
 public class JavaAgent implements ClassFileTransformer {
-	private GroovyScriptMethodRunner groovyRunner = new GroovyScriptMethodRunner();
 	public static String groovyFileDir = System.getProperty("user.home")+"/mock";//"/home/wt/mock/";
-	private long prevModified = 0;
 	private volatile GroovyObject groovyObject;
 	private Set<String> mustIgnored = new HashSet<>();
 	public JavaAgent()  {
-		groovyRunner.initGroovyClassLoader();
-		File file = new File(groovyFileDir,"agent.groovy");
+		CompilerConfiguration config = new CompilerConfiguration();
+		config.setSourceEncoding("UTF-8");
+		// 设置该GroovyClassLoader的父ClassLoader为当前线程的加载器(默认)
+		ClassLoader cl = Thread.currentThread().getContextClassLoader();
+		GroovyClassLoader gcl = new GroovyClassLoader(cl, config);
+
+		File file = new File(groovyFileDir,"ClassFileTransformer.groovy");
 		if(!file.exists()){
 			throw new RuntimeException("file not found: "+file.getAbsolutePath());
 		}
 		try {
-			groovyObject = groovyRunner.loadGroovyScript(file);
+			Class<?> agentClass = gcl.parseClass(file);
+			groovyObject = (GroovyObject) agentClass.newInstance();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -37,8 +41,7 @@ public class JavaAgent implements ClassFileTransformer {
 		mustIgnored.add("java/lang/invoke/MethodHandleImpl");
 	}
 	@Override
-	public byte[] transform(ClassLoader classLoader, String className, Class<?> clazz, ProtectionDomain domain, byte[] bytes)
-			throws IllegalClassFormatException {
+	public byte[] transform(ClassLoader classLoader, String className, Class<?> clazz, ProtectionDomain domain, byte[] bytes) {
 		try {
 			if(className == null){
 				return null;
@@ -46,12 +49,11 @@ public class JavaAgent implements ClassFileTransformer {
 			if(mustIgnored.contains(className)){
 				return null;
 			}
-			//System.out.println("groobyObject="+groovyObject);
 			Object res = groovyObject.invokeMethod("transform", new Object[]{classLoader,className,clazz,domain,bytes});
 			return (byte[]) res;
 		} catch (Exception e1) {
-			System.err.println(className);
-			e1.printStackTrace();
+			//System.err.println(className);
+			//e1.printStackTrace();
 			throw new RuntimeException(e1);
 		}
 	}

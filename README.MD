@@ -137,6 +137,7 @@ InvokerInvocationHandler.groovy拷贝到mock脚本目录（第二个和第三个
 * 无声明接口的spring bean
 
 对OrderServiceImpl#queryAllOrders进行mock
+(不支持)
 
 * controller方法会话
 
@@ -193,4 +194,25 @@ dubbo拿到的对象是spring管理的bean，确实是我们增强了的。
 https://baijiahao.baidu.com/s?id=1593597517685646565&wfr=spider&for=pc
 【译】单元测试最佳实践
 https://www.jianshu.com/p/6f496aedd080
+
+# 8 经验
+类加载器
+boot
+system
+app <- java-agent,groovy-all
+webapp <- java-agent、groovy-all、java-agent-web、web-lib
+java-agent项目中的类，并不是一开始就都被appclassloader加载的，
+有些类是在webapp环境中才被加载的。但是，webapp的类路径中没有包含java-agent，
+所以java-agent中的类会webappclassloader加载不到，会委托给appclassloader加载。
+同理，groovy-all也是如此（如果webapp的类路径中能加载到groovy-all的类，那么会有问题，
+webappclassloader会先尝试自己加载类，加载不到才委托给父类加载器，违背了双亲委托机制。
+不同类加载器加载的类，即使类名相同，也是不同的类，变量赋值时无法通过类型检查。
+so，java-agent中不要依赖太多的包，避免产生和java-agent-web项目的类加载目录
+中有同名的类）。
+在java-agent中，需要访问java-agent-web、web-lib中的类的代码，需要设置在webappclassloader
+环境中执行。
+所以，我们通过groovy
+
+
+
 
