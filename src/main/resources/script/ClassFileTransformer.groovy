@@ -16,10 +16,6 @@ class ClassFileTransformer{
     def config = new CompilerConfiguration()
     def classLoaderProxyMap = new ConcurrentHashMap()
 
-
-    ClassFileTransformer(){
-        init()
-    }
     def init(){
         info("init ClassFileTransformer")
         File file = new File(JavaAgent.groovyFileDir, "ClassNameMatcher.groovy")
@@ -70,7 +66,7 @@ class ClassFileTransformer{
             File file = new File(JavaAgent.groovyFileDir, "ClassProxy.groovy")
             def clName = classLoader.toString()
             if(clName.length()>80){
-                clName = clName.substring(0,80)
+                clName = clName.substring(0,80)+'...'
             }
             info "parse ClassProxy for $clName"
             def groovyClassLoader = new GroovyClassLoader(classLoader, config)

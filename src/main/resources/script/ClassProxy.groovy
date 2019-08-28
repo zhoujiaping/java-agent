@@ -1,8 +1,13 @@
-package org.sirenia.agent.javassist
+import java.lang.reflect.Modifier
+import java.util.Map
 
-import org.codehaus.groovy.control.CompilerConfiguration
+import javassist.ClassPool
+import javassist.CtClass
+import javassist.CtMethod
+import javassist.CtNewMethod
+import javassist.LoaderClassPath
 import org.sirenia.agent.AssistInvoker
-import org.sirenia.agent.AssistProxy
+import org.codehaus.groovy.control.CompilerConfiguration
 import org.sirenia.agent.LastModCacheUtil
 
 import java.lang.reflect.Method
@@ -12,10 +17,12 @@ import org.sirenia.agent.JavaAgent
 class ClassProxy {
 
 	def logger = org.slf4j.LoggerFactory.getLogger('ClassProxy')
-	ClassLoader cl
+	def cl
 	def groovyClassLoader
 	def parseTimeMap = new ConcurrentHashMap()
-
+	def methodSuffix = AssistInvoker.methodSuffix
+	def ivkName = AssistInvoker.class.name
+	
 	def init(ClassLoader cl0){
 		cl = cl0
 		def config = new CompilerConfiguration()
@@ -42,10 +49,10 @@ class ClassProxy {
 
 			private Object doInvoke(Class<?> selfClass, String method, Object[] args, Class<?>[] types, self) {
 				logger.debug "ivk=====> $selfClass,$method,$args"
-				Method thisMethod = selfClass.getDeclaredMethod(method, types);
-				Method proceed = selfClass.getDeclaredMethod(method + AssistProxy.methodSuffix, types);
+				Method thisMethod = selfClass.getDeclaredMethod(method, types)
+				Method proceed = selfClass.getDeclaredMethod(method + methodSuffix, types)
 				if (!proceed.isAccessible()) {
-					proceed.setAccessible(true);
+					proceed.setAccessible(true)
 				}
 				//
 				def cn = selfClass.name
@@ -82,7 +89,49 @@ class ClassProxy {
 				}
 			}
 		}
-		def ctClass = AssistProxy.proxy(cl,className,ivk)
+		def ctClass = proxy(cl,className,ivk)
 		ctClass.toBytecode()
 	}
+
+    CtClass proxy(ClassLoader cl, String className, AssistInvoker ivk) throws Exception {
+        if (cl == null) {
+            cl = Thread.currentThread().getContextClassLoader()
+        }
+        ClassPool pool = ClassPool.getDefault()// ClassPoolUtils.linkClassPool(cl)
+        pool.appendClassPath(new LoaderClassPath(cl))
+        CtClass ct = pool.getCtClass(className)
+        if(ct.isInterface()){
+            return ct
+        }
+        // 解冻
+        if (ct.isFrozen()) {
+            ct.defrost()
+        }
+        CtMethod[] methods = ct.getDeclaredMethods()// ct.getMethods()
+        for (int i = 0 i < methods.length i++) {
+            CtMethod method = methods[i]
+            String methodName = method.getName()
+			if(methodName.startsWith('lambda$')){
+				continue
+			}
+            CtMethod copyMethod = CtNewMethod.copy(method, methodName + methodSuffix, ct, null)
+            ct.addMethod(copyMethod)
+            int mod = method.getModifiers()
+            String body = ""
+            if (Modifier.isStatic(mod)) {
+                body = '{return ($r)$proceed($class,null,'+ methodName+',$sig,$args)}'
+            } else {
+                body = '{return ($r)$proceed($class,$0,'+methodName+',$sig,$args)}'
+            }
+            String delegateName = """($ivkName)${ivkName}.ivkMap.get("$ct.name")"""
+            method.setBody(body, delegateName, "invoke")
+        }
+        if (ivk) {
+            AssistInvoker.ivkMap.put(ct.getName(), ivk)
+        }
+        // Class<?> c = ct.toClass()
+        // ct.writeFile("d:/")
+        // ct.writeFile(CtClass.class.getClassLoader().getResource(".").getFile())
+        return ct
+    }
 }

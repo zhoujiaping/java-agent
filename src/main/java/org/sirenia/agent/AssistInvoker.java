@@ -1,6 +1,8 @@
 package org.sirenia.agent;
 
 import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * when javassist compile enhanced class,all class occur in it should be known.
@@ -10,11 +12,12 @@ import java.lang.reflect.Method;
  * @date 2019-08-27
  */
 public abstract class AssistInvoker {
-
+	public static final String methodSuffix = "_pxy";
+	public static final Map<String, AssistInvoker> ivkMap = new ConcurrentHashMap<>();
     public static AssistInvoker defaultIvk = new AssistInvoker(){
         public Object invoke(Class<?> selfClass,Object self,String method,Class<?>[] types,Object[] args) throws Throwable{
             //Method thisMethod = selfClass.getDeclaredMethod(method, types);
-            Method proceed = selfClass.getDeclaredMethod(method+AssistProxy.methodSuffix, types);
+            Method proceed = selfClass.getDeclaredMethod(method+methodSuffix, types);
             if(!proceed.isAccessible()){
                 proceed.setAccessible(true);
             }
@@ -23,7 +26,7 @@ public abstract class AssistInvoker {
     };
     public Object invoke(Class<?> selfClass,Object self,String method,Class<?>[] types,Object[] args) throws Throwable{
         Method thisMethod = selfClass.getDeclaredMethod(method, types);
-        Method proceed = selfClass.getDeclaredMethod(method+AssistProxy.methodSuffix, types);
+        Method proceed = selfClass.getDeclaredMethod(method+methodSuffix, types);
         if(!proceed.isAccessible()){
             proceed.setAccessible(true);
         }

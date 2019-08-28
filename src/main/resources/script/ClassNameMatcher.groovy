@@ -18,9 +18,6 @@ org.wt.model.User
         if (className.startsWith("org.sirenia")) {
             return false
         }
-        if(className.contains("OrderServiceImpl")){
-            println className+" why not trans"
-        }
         if (className.contains('$')){
             return false
         }
