@@ -215,7 +215,7 @@ so，java-agent中不要依赖太多的包，避免产生和java-agent-web项目
 中有同名的类）。
 在java-agent中，需要访问java-agent-web、web-lib中的类的代码，需要设置在webappclassloader
 环境中执行。
-所以，我们通过groovy
+所以，我们通过groovyclassloader,将我们写的代码，放在webappclassloader环境下执行。
 
 
 
