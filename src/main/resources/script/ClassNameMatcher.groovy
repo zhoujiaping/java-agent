@@ -11,7 +11,6 @@ org.wt.model.User
 """
         classSet = classes.trim().split(/\s+/).findAll{!it.endsWith("//")} as HashSet
         classSet << "com.alibaba.dubbo.rpc.proxy.InvokerInvocationHandler" //通过代理dubbo的InvokerInvocationHandler，实现对远程dubbo服务的代理
-        classSet << "com.alibaba.dubbo.common.bytecode.ClassGenerator" //兼容dubbo的代理
     }
     def match(String className){
         //对java-agent项目中的类直接放行，不代理

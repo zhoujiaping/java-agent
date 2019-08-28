@@ -19,15 +19,16 @@ class ClassProxy {
 	def logger = org.slf4j.LoggerFactory.getLogger('ClassProxy')
 	def cl
 	def groovyClassLoader
-	def parseTimeMap = new ConcurrentHashMap()
 	def methodSuffix = AssistInvoker.methodSuffix
 	def ivkName = AssistInvoker.class.name
-	
+	ClassPool pool
 	def init(ClassLoader cl0){
 		cl = cl0
 		def config = new CompilerConfiguration()
 		config.setSourceEncoding("UTF-8")
 		groovyClassLoader = new GroovyClassLoader(cl0, config)
+		pool = ClassPool.getDefault()
+		pool.appendClassPath(new LoaderClassPath(cl))
 	}
 
 	def proxy(String className){
@@ -89,16 +90,11 @@ class ClassProxy {
 				}
 			}
 		}
-		def ctClass = proxy(cl,className,ivk)
+		def ctClass = proxy(className,ivk)
 		ctClass.toBytecode()
 	}
 
-    CtClass proxy(ClassLoader cl, String className, AssistInvoker ivk) throws Exception {
-        if (cl == null) {
-            cl = Thread.currentThread().getContextClassLoader()
-        }
-        ClassPool pool = ClassPool.getDefault()// ClassPoolUtils.linkClassPool(cl)
-        pool.appendClassPath(new LoaderClassPath(cl))
+    CtClass proxy(String className, AssistInvoker ivk){
         CtClass ct = pool.getCtClass(className)
         if(ct.isInterface()){
             return ct
@@ -107,21 +103,27 @@ class ClassProxy {
         if (ct.isFrozen()) {
             ct.defrost()
         }
-        CtMethod[] methods = ct.getDeclaredMethods()// ct.getMethods()
-        for (int i = 0 i < methods.length i++) {
-            CtMethod method = methods[i]
-            String methodName = method.getName()
+		/*TODO
+        dubbo/spring 使用javassist时，会读取class文件，而我们修改的class并没有写到class文件中，
+        所以我们修改的内容，在这种情况会失效。我们需要重新代理。
+        添加一个标记字段，如果已经被我们代理过，就不再代理。
+        * */
+		int mod = method.getModifiers()
+		CtMethod[] methods = ct.getDeclaredMethods()// ct.getMethods()
+		for (int i = 0;i < methods.length;i++) {
+			CtMethod method = methods[i]
+			String methodName = method.getName()
 			if(methodName.startsWith('lambda$')){
 				continue
 			}
-            CtMethod copyMethod = CtNewMethod.copy(method, methodName + methodSuffix, ct, null)
-            ct.addMethod(copyMethod)
-            int mod = method.getModifiers()
+			CtMethod copyMethod = CtNewMethod.copy(method, methodName + methodSuffix, ct, null)
+			copyMethod.setModifiers(Modifier.PRIVATE)
+			ct.addMethod(copyMethod)
             String body = ""
             if (Modifier.isStatic(mod)) {
-                body = '{return ($r)$proceed($class,null,'+ methodName+',$sig,$args)}'
+                body = '{return ($r)$proceed($class,null,"'+ methodName+'",$sig,$args);}'
             } else {
-                body = '{return ($r)$proceed($class,$0,'+methodName+',$sig,$args)}'
+                body = '{return ($r)$proceed($class,$0,"'+methodName+'",$sig,$args);}'
             }
             String delegateName = """($ivkName)${ivkName}.ivkMap.get("$ct.name")"""
             method.setBody(body, delegateName, "invoke")

@@ -41,6 +41,10 @@ class ClassFileTransformer{
     }
 
     private doTransform(ClassLoader classLoader, String className) {
+        if(classNameMatcher==null){
+            //println "classNameMatcher is null"
+            return null
+        }
         if (classLoader.getClass().getName().contains('GroovyClassLoader')) {
             return null
         }

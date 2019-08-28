@@ -195,6 +195,16 @@ boot
 system
 app <- java-agent,groovy-all
 webapp <- java-agent、groovy-all、java-agent-web、web-lib
+
+transformer,不能拦截java-agent项目中的类，因为java-agent项目中的类，
+是在transformer之前就已经加载的。所以，java-agent项目中使用javassist，
+要么在java-agent中直接依赖（这样可能会和java-agent-web中的javassist版本不一致），
+要么延迟加载。所以通过写在groovy中，在transformer需要时再加载是比较合适的。
+
+在集成开发环境中，由于集成开发工具的特殊处理，这种错误会被修复（虽然不知道怎么实现的）。
+但是部署到外部的tomcat环境中时，这种错误将导致代理失败，并且没有任何错误日志！
+所以，java-agent项目中的java类，需要尽可能的简单，尽可能将逻辑放在groovy中实现。
+
 java-agent项目中的类，并不是一开始就都被appclassloader加载的，
 有些类是在webapp环境中才被加载的。但是，webapp的类路径中没有包含java-agent，
 所以java-agent中的类会webappclassloader加载不到，会委托给appclassloader加载。

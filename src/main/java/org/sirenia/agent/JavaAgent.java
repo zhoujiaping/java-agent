@@ -32,7 +32,7 @@ public class JavaAgent implements ClassFileTransformer {
 			}
 			Class<?> agentClass = gcl.parseClass(file);
 			groovyObject = (GroovyObject) agentClass.newInstance();
-			groovyObject.invokeMethod("init", new Object[] {});
+			groovyObject.invokeMethod("init",new Object[0]);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		} finally {
