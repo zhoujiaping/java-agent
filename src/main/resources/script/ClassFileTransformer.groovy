@@ -10,8 +10,6 @@ import org.codehaus.groovy.control.CompilerConfiguration
 -javaagent:/home/wt/IdeaProjects/java-agent/target/java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 */
 class ClassFileTransformer{
-    //记录已代理过的类名
-    def loadedClass = new ConcurrentHashMap()
     def classNameMatcher
     def config = new CompilerConfiguration()
     def classLoaderProxyMap = new ConcurrentHashMap()
@@ -48,22 +46,13 @@ class ClassFileTransformer{
         if (classLoader.getClass().getName().contains('GroovyClassLoader')) {
             return null
         }
-        if (className in loadedClass) {
-            return null
-        }
+
         //类名使用/分隔的，替换成.分隔
         className = className.replace("/", ".")
-        //已经代理过，不需要再代理，直接返回null
-        if (loadedClass.containsKey(className)) {
-            return null
-        }
+
         if (!classNameMatcher.match(className)) {
             return null
         }
-
-        loadedClass.put(className, "")
-
-        info "transformer => $className"
 
         def classProxy = classLoaderProxyMap[classLoader]
         if (!classProxy) {
@@ -76,8 +65,8 @@ class ClassFileTransformer{
             def groovyClassLoader = new GroovyClassLoader(classLoader, config)
             classProxy = groovyClassLoader.parseClass(file).newInstance()
             classLoaderProxyMap[classLoader] = classProxy
+            classProxy.init(classLoader)
         }
-        classProxy.init(classLoader)
         classProxy.proxy(className)
     }
 

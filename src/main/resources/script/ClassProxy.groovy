@@ -1,3 +1,5 @@
+import javassist.CtField
+
 import java.lang.reflect.Modifier
 import java.util.Map
 
@@ -19,7 +21,7 @@ class ClassProxy {
 	def logger = org.slf4j.LoggerFactory.getLogger('ClassProxy')
 	def cl
 	def groovyClassLoader
-	def methodSuffix = AssistInvoker.methodSuffix
+	def methodSuffix = '_pxy'
 	def ivkName = AssistInvoker.class.name
 	ClassPool pool
 	def init(ClassLoader cl0){
@@ -32,9 +34,10 @@ class ClassProxy {
 	}
 
 	def proxy(String className){
-		def parts = className.split(/\./)
-		def simpleName = parts[-1]
-
+		def ctClass = proxy0(className)
+		if(ctClass==null){
+			return null
+		}
 		def ivk = new AssistInvoker(){
 			/*code below will be trans to bytecode, it will load by webappclassloader,
 			so, donot use code which webappclassloader cannot find!
@@ -90,25 +93,30 @@ class ClassProxy {
 				}
 			}
 		}
-		def ctClass = proxy(className,ivk)
+		AssistInvoker.ivkMap.put(ctClass.getName(), ivk)
 		ctClass.toBytecode()
 	}
 
-    CtClass proxy(String className, AssistInvoker ivk){
+    CtClass proxy0(String className){
         CtClass ct = pool.getCtClass(className)
-        if(ct.isInterface()){
-            return ct
-        }
         // 解冻
         if (ct.isFrozen()) {
             ct.defrost()
         }
-		/*TODO
-        dubbo/spring 使用javassist时，会读取class文件，而我们修改的class并没有写到class文件中，
-        所以我们修改的内容，在这种情况会失效。我们需要重新代理。
+		if(ct.isInterface()){
+			return null
+		}
+		/*
         添加一个标记字段，如果已经被我们代理过，就不再代理。
-        * */
-		int mod = method.getModifiers()
+        */
+		try{
+			ct.getField("_pxy")
+			return null
+		}catch(javassist.NotFoundException e){
+			logger.info("transform => $className")
+			CtField ctf = new CtField(CtClass.intType,'_pxy',ct)
+			ct.addField(ctf)
+		}
 		CtMethod[] methods = ct.getDeclaredMethods()// ct.getMethods()
 		for (int i = 0;i < methods.length;i++) {
 			CtMethod method = methods[i]
@@ -119,17 +127,15 @@ class ClassProxy {
 			CtMethod copyMethod = CtNewMethod.copy(method, methodName + methodSuffix, ct, null)
 			copyMethod.setModifiers(Modifier.PRIVATE)
 			ct.addMethod(copyMethod)
-            String body = ""
-            if (Modifier.isStatic(mod)) {
+			String body = ""
+			int mod = method.getModifiers()
+			if (Modifier.isStatic(mod)) {
                 body = '{return ($r)$proceed($class,null,"'+ methodName+'",$sig,$args);}'
             } else {
                 body = '{return ($r)$proceed($class,$0,"'+methodName+'",$sig,$args);}'
             }
             String delegateName = """($ivkName)${ivkName}.ivkMap.get("$ct.name")"""
             method.setBody(body, delegateName, "invoke")
-        }
-        if (ivk) {
-            AssistInvoker.ivkMap.put(ct.getName(), ivk)
         }
         // Class<?> c = ct.toClass()
         // ct.writeFile("d:/")
