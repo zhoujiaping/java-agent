@@ -22,28 +22,24 @@ java5引入了一个api，叫做Instrument，它支持在jvm启动时拦截类�
 * 学习使用javassist增强字节码
 * 了解dubbo消费端执行的逻辑
 ## 1.3 环境要求
-* >=java8（后续版本会支持java7）
+* java8及以上（后续版本会支持java7）
 # 2 使用方法
 由于其原理是基于jvm级别的代理，所以普通java项目和web项目的使用方法差不多。
 这里只介绍web项目部署在tomcat下的使用方法。
 ## 2.1 打包
-将java-agent项目的javassist的版本改成和目标项目依赖的javassist的版本一致（一般都会依赖这个jar包），
-假设javassist版本为3.23.1-GA。
 
-然后执行mvn package将项目打包。
+执行mvn package将项目打包。
 
 打包后有两个jar包，较小的那个是没有将依赖一起打包的，较大的一个是将依赖一起打包了的，
 我们需要后面那个，比如打包后文件名为java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar,
-我们将文件名修改为java-agent-0.0.1-SNAPSHOT-with-3.23.1-GA.jar(为了方便区分依赖javassist的版本)。
 
-将java-agent-0.0.1-SNAPSHOT-with-3.23.1-GA.jar拷贝到/home/wt/mock目录下（随笔哪个目录，有权限就行）。
+将java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar拷贝到/home/wt/mock目录下（随便哪个目录，有权限就行）。
 ## 2.2 配置
 修改tomcat的bin目录下的setenv.sh文件，添加jvm启动参数，如下：
 JAVA_OPTS="$JAVA_OPTS -javaagent:/home/wt/mock/java-agent-0.0.1-SNAPSHOT-with-3.23.1-GA.jar=/home/wt/mock/"
 （后面那个目录跟前面的目录无关，我们称后面那个目录/home/wt/mock为mock脚本目录）。
 
-将java-agent项目test/resources/groovy-script目录下的文件agent.groovy,ClassGenerator.groovy,
-InvokerInvocationHandler.groovy拷贝到mock脚本目录（第二个和第三个groovy文件用来支持对dubbo服务的mock）。
+将java-agent项目resources/script目录下的文件拷贝到mock脚本目录
 编辑agent.groovy文件，修改init方法中classes变量的值，即配置我们需要mock哪些类
 （注意：你要mock的方法在哪个类里面声明的，就配置哪个类的类全名）。
 
@@ -137,7 +133,6 @@ InvokerInvocationHandler.groovy拷贝到mock脚本目录（第二个和第三个
 * 无声明接口的spring bean
 
 对OrderServiceImpl#queryAllOrders进行mock
-(不支持)
 
 * controller方法会话
 
@@ -153,9 +148,8 @@ InvokerInvocationHandler.groovy拷贝到mock脚本目录（第二个和第三个
 * mock文件中使用spring上下文 
 * and so on...
 # 5 注意事项
-* 不要代理容器（比如tomcat）的类
-* 务必保证该项目引用的javassist的版本和目标项目引入的javassist的版本一致 
-
+* 不要轻易代理容器（比如tomcat）的类
+* 不支持mock接口默认方法
 # 6 最佳实践
 * 每个web应用，使用一个mock目录。
 * mock范围，不要太大，也不要太小。太大了会影响性能，太小了会导致添加新的mock方法可能需要重启。
