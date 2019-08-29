@@ -44,15 +44,18 @@ class ClassProxy {
 			*/
 			Object invoke(Class<?> selfClass,Object self,String method,Class<?>[] types,Object[] args){
 				try{
-					return doInvoke(selfClass, method, args, types, self)
+					return doInvoke(selfClass,self, method,  types, args)
 				}catch(e){
 					logger.error("$selfClass,$self,$method,$types,$args")
 					throw e
 				}
 			}
 
-			private Object doInvoke(Class<?> selfClass, String method, Object[] args, Class<?>[] types, self) {
+			private Object doInvoke(Class<?> selfClass,Object self ,String method,Class<?>[] types, Object[] args) {
+				println "ivk=====> $selfClass,$method,$args"
 				logger.debug "ivk=====> $selfClass,$method,$args"
+				println self.getClass().classLoader
+				println selfClass.classLoader
 				Method thisMethod = selfClass.getDeclaredMethod(method, types)
 				Method proceed = selfClass.getDeclaredMethod(method + methodSuffix, types)
 				if (!proceed.isAccessible()) {
@@ -93,8 +96,10 @@ class ClassProxy {
 				}
 			}
 		}
-		AssistInvoker.ivkMap.put(ctClass.getName(), ivk)
-		ctClass.toBytecode()
+		AssistInvoker.ivkMap.put(ctClass.name, ivk)
+		//ctClass.toClass()
+		//ctClass.toBytecode()
+		ctClass
 	}
 
     CtClass proxy0(String className){
@@ -104,6 +109,9 @@ class ClassProxy {
             ct.defrost()
         }
 		if(ct.isInterface()){
+			return null
+		}
+		if(ct.isEnum()){
 			return null
 		}
 		/*

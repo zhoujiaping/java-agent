@@ -184,10 +184,21 @@ dubbo拿到的对象是spring管理的bean，确实是我们增强了的。
 异常：has illegal modifiers
 解决办法：确认javassist包的版本和被代理的包依赖的javassist版本兼容。
 
+java.lang.VerifyError: Inconsistent stackmap frames at branch target 48
+https://blog.csdn.net/u013476542/article/details/53242050
+如果是jdk7：-XX:-UseSplitVerifier
+如果是jdk8：-noverify
+
+Caused by: java.lang.ClassFormatError: Arguments can't fit into locals in class file 
+不能代理常量类
+
+
 软件开发和测试的 30 个最佳实践
 https://baijiahao.baidu.com/s?id=1593597517685646565&wfr=spider&for=pc
 【译】单元测试最佳实践
 https://www.jianshu.com/p/6f496aedd080
+
+
 
 # 8 经验
 类加载器

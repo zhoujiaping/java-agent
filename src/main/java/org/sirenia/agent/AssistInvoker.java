@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * when javassist compile enhanced class,all class occur in it should be known.
  * so, this class is here, it cannot defined in groovy code.
- * so is AssistProxy.
  * @author zhoujiaping
  * @date 2019-08-27
  */
