@@ -205,10 +205,6 @@ transformer,不能拦截java-agent项目中的类，因为java-agent项目中的
 但是部署到外部的tomcat环境中时，这种错误将导致代理失败，并且没有任何错误日志！
 所以，java-agent项目中的java类，需要尽可能的简单，尽可能将逻辑放在groovy中实现。
 
-java-agent项目中的类，并不是一开始就都被appclassloader加载的，
-有些类是在webapp环境中才被加载的。但是，webapp的类路径中没有包含java-agent，
-所以java-agent中的类会webappclassloader加载不到，会委托给appclassloader加载。
-同理，groovy-all也是如此（如果webapp的类路径中能加载到groovy-all的类，那么会有问题，
 webappclassloader会先尝试自己加载类，加载不到才委托给父类加载器，违背了双亲委托机制。
 不同类加载器加载的类，即使类名相同，也是不同的类，变量赋值时无法通过类型检查。
 so，java-agent中不要依赖太多的包，避免产生和java-agent-web项目的类加载目录
