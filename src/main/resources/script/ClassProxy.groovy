@@ -1,6 +1,8 @@
+import javassist.ByteArrayClassPath
 import javassist.CtField
 
 import java.lang.reflect.Modifier
+import java.security.ProtectionDomain
 import java.util.Map
 
 import javassist.ClassPool
@@ -18,22 +20,26 @@ import org.sirenia.agent.JavaAgent
 
 class ClassProxy {
 
-	def logger = org.slf4j.LoggerFactory.getLogger('ClassProxy')
-	def cl
-	def groovyClassLoader
+	def logger = org.slf4j.LoggerFactory.getLogger('ClassProxy#proxy')
+	ClassLoader cl
 	def methodSuffix = '_pxy'
 	def ivkName = AssistInvoker.class.name
+	def shell = new GroovyShell()
 	ClassPool pool
 	def init(ClassLoader cl0){
 		cl = cl0
-		def config = new CompilerConfiguration()
-		config.setSourceEncoding("UTF-8")
-		groovyClassLoader = new GroovyClassLoader(cl0, config)
 		pool = ClassPool.getDefault()
 		pool.appendClassPath(new LoaderClassPath(cl))
 	}
+	def proxyToClass(String className){
+		def ct = proxy(className,null,null)
+		if(ct){
+			return ct.toClass()
+		}
+		return Class.forName(className,true,cl)
+	}
 
-	def proxy(String className){
+	def proxy(String className, ProtectionDomain domain, byte[] bytes){
 		def ctClass = proxy0(className)
 		if(ctClass==null){
 			return null
@@ -42,7 +48,7 @@ class ClassProxy {
 			/*code below will be trans to bytecode, it will load by webappclassloader,
 			so, donot use code which webappclassloader cannot find!
 			*/
-			Object invoke(Class<?> selfClass,Object self,String method,Class<?>[] types,Object[] args){
+			def invoke(Class selfClass,Object self,String method,Class[] types,Object[] args){
 				try{
 					return doInvoke(selfClass,self, method,  types, args)
 				}catch(e){
@@ -51,11 +57,11 @@ class ClassProxy {
 				}
 			}
 
-			private Object doInvoke(Class<?> selfClass,Object self ,String method,Class<?>[] types, Object[] args) {
-				println "ivk=====> $selfClass,$method,$args"
-				logger.debug "ivk=====> $selfClass,$method,$args"
-				println self.getClass().classLoader
-				println selfClass.classLoader
+			private Object doInvoke(Class selfClass,Object self ,String method,Class[] types, Object[] args) {
+				//println "ivk=====> $selfClass,$method,$args"
+				logger.info "ivk=====> $selfClass,$method,$args"
+				//println self.getClass().classLoader
+				//println selfClass.classLoader
 				Method thisMethod = selfClass.getDeclaredMethod(method, types)
 				Method proceed = selfClass.getDeclaredMethod(method + methodSuffix, types)
 				if (!proceed.isAccessible()) {
@@ -76,20 +82,24 @@ class ClassProxy {
 				}
 
 				def onExpire = {
-					groovyClassLoader.parseClass(file).newInstance()
+					def script = shell.evaluate(file)
+					if(!script){
+						throw new RuntimeException("evaluate script returns null, forgot return this?")
+					}
+					script
 				} as LastModCacheUtil.OnExpire
 				def proxy = LastModCacheUtil.get(file.getAbsolutePath(), onExpire)
 				proxy.metaClass.logger = org.slf4j.LoggerFactory.getLogger("${sn}#proxy")
-				proxy.metaClass.groovyClassLoader = groovyClassLoader
+				proxy.metaClass.shell = shell
 				def methodName = thisMethod.getName()
 				if (proxy.metaClass.respondsTo(proxy, methodName, *args)) {
-					logger.debug("invoke proxy method $methodName ${args}")
+					logger.info("ivk proxy=====> ${cn}#$methodName")
 					return proxy."$methodName"(*args)
 				} else {
 					def ivkArgs = [self, thisMethod, proceed, args]
-					if (proxy.metaClass.respondsTo(proxy, "${methodName}#invoke", *ivkArgs)) {
-						logger.debug("invoke proxy method $methodName#invoke ${args}")
-						return proxy."${methodName}#invoke"(*ivkArgs)
+					if (proxy.metaClass.respondsTo(proxy, "${methodName}-invoke", *ivkArgs)) {
+						logger.info("ivk proxy=====> ${cn}#$methodName-invoke")
+						return proxy."${methodName}-invoke"(*ivkArgs)
 					} else {
 						return proceed.invoke(self, args)
 					}
@@ -128,6 +138,10 @@ class ClassProxy {
 		CtMethod[] methods = ct.getDeclaredMethods()// ct.getMethods()
 		for (int i = 0;i < methods.length;i++) {
 			CtMethod method = methods[i]
+			int mod = method.getModifiers()
+			if(Modifier.isAbstract(mod)){
+				continue
+			}
 			String methodName = method.getName()
 			if(methodName.startsWith('lambda$')){
 				continue
@@ -136,14 +150,13 @@ class ClassProxy {
 			copyMethod.setModifiers(Modifier.PRIVATE)
 			ct.addMethod(copyMethod)
 			String body = ""
-			int mod = method.getModifiers()
 			if (Modifier.isStatic(mod)) {
-                body = '{return ($r)$proceed($class,null,"'+ methodName+'",$sig,$args);}'
-            } else {
-                body = '{return ($r)$proceed($class,$0,"'+methodName+'",$sig,$args);}'
-            }
-            String delegateName = """($ivkName)${ivkName}.ivkMap.get("$ct.name")"""
-            method.setBody(body, delegateName, "invoke")
+				body = '{return ($r)$proceed($class,null,"' + methodName + '",$sig,$args);}'
+			} else {
+				body = '{return ($r)$proceed($class,$0,"' + methodName + '",$sig,$args);}'
+			}
+			String delegateName = """($ivkName)${ivkName}.ivkMap.get("$ct.name")"""
+			method.setBody(body, delegateName, "invoke")
         }
         // Class<?> c = ct.toClass()
         // ct.writeFile("d:/")

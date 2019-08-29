@@ -15,9 +15,6 @@ public class Naruto {
 			naruto = new Naruto();
 			return naruto.luoxuanwan(date, num);
 		}*/
-		try(InputStream in = new FileInputStream("d:/debug.log")){
-			in.read();
-		}
 		return new Date();
 	}
 }

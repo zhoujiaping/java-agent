@@ -9,33 +9,24 @@ import org.codehaus.groovy.control.CompilerConfiguration
 -javaagent:/home/wt/IdeaProjects/java-agent/target/java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 */
 info("init ClassFileTransformer")
-this.config = new CompilerConfiguration()
-this.classLoaderProxyMap = new ConcurrentHashMap()
-File file = new File(JavaAgent.groovyFileDir, "ClassNameMatcher.groovy")
+config = new CompilerConfiguration()
 config.setSourceEncoding("UTF-8")
+classLoaderProxyMap = new ConcurrentHashMap()
+
 def shell = new GroovyShell()
-this.classNameMatcher = shell.evaluate(file)
+File file = new File(JavaAgent.groovyFileDir, "ClassNameMatcher.groovy")
+classNameMatcher = shell.evaluate(file)
 
 def info(String msg){
     def time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date())
     println "[$time] $msg"
 }
 def transform(ClassLoader classLoader, String className, Class<?> clazz, ProtectionDomain domain, byte[] bytes){
-    try{
-        return doTransform(classLoader, className)
-    }catch(e){
-        System.err.println("transform error: ${className}")
-        e.printStackTrace()
-        throw e
-    }
+    return transform0(classLoader, className, domain, bytes)
 }
 
-def doTransform(ClassLoader classLoader, String className) {
-    if(classNameMatcher==null){
-        //println "classNameMatcher is null"
-        return null
-    }
-    if (classLoader.getClass().getName().contains('GroovyClassLoader')) {
+def transform0(ClassLoader classLoader, String className, ProtectionDomain domain, byte[] bytes) {
+    if (classLoader.getClass().name.contains('GroovyClassLoader')) {
         return null
     }
 
@@ -59,7 +50,10 @@ def doTransform(ClassLoader classLoader, String className) {
         classLoaderProxyMap[classLoader] = classProxy
         classProxy.init(classLoader)
     }
-    def ct = classProxy.proxy(className)
-	ctClass.toBytecode()
+    def ctClass = classProxy.proxy(className,domain,bytes)
+    if(ctClass){
+        return ctClass.toBytecode()
+    }
+    return null
 }
 return this

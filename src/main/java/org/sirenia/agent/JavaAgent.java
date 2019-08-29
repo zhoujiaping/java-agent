@@ -49,9 +49,9 @@ public class JavaAgent implements ClassFileTransformer {
 					new Object[] { classLoader, className, clazz, domain, bytes });
 			return (byte[]) res;
 		} catch (Exception e1) {
-			// System.err.println(className);
-			// e1.printStackTrace();
-			throw new RuntimeException(e1);
+			RuntimeException e = new RuntimeException("transform error: "+className,e1);
+			e.printStackTrace();
+			throw e;
 		}
 	}
 

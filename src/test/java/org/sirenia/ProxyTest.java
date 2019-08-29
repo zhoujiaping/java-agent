@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyObject;
+import org.sirenia.agent.AssistInvoker;
 
 public class ProxyTest {
 	/**
@@ -22,8 +23,7 @@ public class ProxyTest {
 		File file = new File(filename);
 		GroovyObject proxy = (GroovyObject) gcl.parseClass(file ).newInstance();
 		proxy.invokeMethod("init", gcl);
-		byte[] buf = (byte[]) proxy.invokeMethod("proxy", "org.sirenia.enums.Color");
-		Class res = gcl.defineClass("org.sirenia.enums.Color", buf);
+		Class res = (Class) proxy.invokeMethod("proxyToClass", "org.sirenia.enums.Color");
 		Object str = res.getDeclaredMethod("hello").invoke(res.getDeclaredField("BLACK").get(null));
 		System.out.println(str);
 		System.out.println(res);
@@ -37,8 +37,7 @@ public class ProxyTest {
 		File file = new File(filename);
 		GroovyObject proxy = (GroovyObject) gcl.parseClass(file ).newInstance();
 		proxy.invokeMethod("init", gcl);
-		Object ct = proxy.invokeMethod("proxy", "org.sirenia.domain.Naruto");
-		Class res = (Class) ct.getClass().getMethod("toClass").invoke(ct);
+		Class res = (Class) proxy.invokeMethod("proxyToClass", "org.sirenia.domain.Naruto");
 		//Class res = gcl.defineClass("org.sirenia.domain.Naruto", buf);
 		Method[] ms = res.getDeclaredMethods();
 		Constructor c = res.getDeclaredConstructor();
