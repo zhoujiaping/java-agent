@@ -3,6 +3,7 @@ package org.sirenia;
 import java.io.File;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Date;
 
 import org.junit.Test;
@@ -49,5 +50,12 @@ public class ProxyTest {
 		Object r = m.invoke(target, null,1);
 		System.out.println(r);
 		System.out.println(res);
+	}
+
+	@Test
+	public void testClassPath() throws ClassNotFoundException {
+		String cp = System.getProperty("java.class.path");
+		System.setProperty("java.class.path",cp+":/home/wt/IdeaProjects/java-agent-web/target/classes");
+
 	}
 }

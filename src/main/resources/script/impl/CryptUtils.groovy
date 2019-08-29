@@ -1,6 +1,5 @@
 import com.alibaba.fastjson.JSONObject
 
-def logger = org.slf4j.LoggerFactory.getLogger 'CryptUtils#groovy'
 def enc(data){
 	data
 }

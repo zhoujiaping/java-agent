@@ -1,6 +1,6 @@
 import com.alibaba.fastjson.JSONObject
 import org.wt.model.Order
-def logger = org.slf4j.LoggerFactory.getLogger 'OrderServiceImpl#groovy'
+
 def queryAllOrders(){
 	[new Order(orderNo:'qwer1234')]
 }

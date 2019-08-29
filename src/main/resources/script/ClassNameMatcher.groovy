@@ -7,6 +7,7 @@ matchReg = /org.wt.*(Mapper|Service|Component|Controller).*/
 def classes = """
 org.wt.util.CryptUtils
 org.wt.model.User
+org.wt.aop.AspectTest
 """
 includes = classes.trim().split(/\s+/).findAll{!it.startsWith("//")} as HashSet
 includes << "com.alibaba.dubbo.rpc.proxy.InvokerInvocationHandler" //通过代理dubbo的InvokerInvocationHandler，实现对远程dubbo服务的代理
