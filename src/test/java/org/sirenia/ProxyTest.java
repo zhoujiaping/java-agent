@@ -68,7 +68,7 @@ public class ProxyTest {
 		Object target = c.newInstance();
 		Method m = res.getDeclaredMethod("addDate", Date.class,int.class);
 		m.setAccessible(true);
-		Object r = m.invoke(target, null,1);
+ 		Object r = m.invoke(target, new Date(),1);
 		System.out.println(r);
 		System.out.println(res);
 	}
