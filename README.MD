@@ -224,6 +224,8 @@ so，java-agent中不要依赖太多的包，避免产生和java-agent-web项目
 环境中执行。
 所以，我们通过groovyclassloader,将我们写的代码，放在webappclassloader环境下执行。
 
+版本日志
+0.0.1-SNAPSHOT
 
 
 
