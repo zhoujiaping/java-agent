@@ -23,6 +23,12 @@ public abstract class AssistInvoker {
             return proceed.invoke(self, args);
         }
     };
+    public static Object invokeIvk(Class<?> selfClass,Object self,String method,Class<?>[] types,Object[] args)throws Throwable{
+    	AssistInvoker ivk = ivkMap.get(selfClass.getName());
+    	//System.out.println(selfClass.getName());
+    	//System.out.println(AssistInvoker.class.getClassLoader());
+    	return ivk.invoke(selfClass, self, method, types, args);
+    }
     public Object invoke(Class<?> selfClass,Object self,String method,Class<?>[] types,Object[] args) throws Throwable{
         Method thisMethod = selfClass.getDeclaredMethod(method, types);
         Method proceed = selfClass.getDeclaredMethod(method+methodSuffix, types);

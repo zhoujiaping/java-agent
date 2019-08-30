@@ -48,14 +48,14 @@ class ClassProxy {
 			/*code below will be trans to bytecode, it will load by webappclassloader,
 			so, donot use code which webappclassloader cannot find!
 			*/
-			def invoke(Class selfClass,Object self,String method,Class[] types,Object[] args){
+			/*def invoke(Class selfClass,Object self,String method,Class[] types,Object[] args){
 				try{
 					return doInvoke(selfClass,self, method,  types, args)
 				}catch(e){
 					logger.error("$selfClass,$self,$method,$types,$args")
 					throw e
 				}
-			}
+			}*/
 
 			private Object doInvoke(Class selfClass,Object self ,String method,Class[] types, Object[] args) {
 				//println "ivk=====> $selfClass,$method,$args"
@@ -147,7 +147,12 @@ class ClassProxy {
 				continue
 			}
 			CtMethod copyMethod = CtNewMethod.copy(method, methodName + methodSuffix, ct, null)
-			copyMethod.setModifiers(Modifier.PRIVATE)
+			/*设置方法为私有的
+				错误方式：copyMethod.setModifiers(Modifier.PRIVATE)
+				这样会修改去掉其他修饰符
+			*/
+			copyMethod.setModifiers(mod&~Modifier.PRIVATE)
+			
 			ct.addMethod(copyMethod)
 			String body = ""
 			if (Modifier.isStatic(mod)) {
@@ -155,8 +160,7 @@ class ClassProxy {
 			} else {
 				body = '{return ($r)$proceed($class,$0,"' + methodName + '",$sig,$args);}'
 			}
-			String delegateName = """($ivkName)${ivkName}.ivkMap.get("$ct.name")"""
-			method.setBody(body, delegateName, "invoke")
+			method.setBody(body, ivkName, "invokeIvk")
         }
         // Class<?> c = ct.toClass()
         // ct.writeFile("d:/")

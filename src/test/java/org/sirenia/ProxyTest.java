@@ -51,6 +51,27 @@ public class ProxyTest {
 		System.out.println(r);
 		System.out.println(res);
 	}
+	
+	@SuppressWarnings({ "rawtypes", "unchecked", "unused" })
+	@Test
+	public void testProxyFinalClass2()throws Exception{
+		GroovyClassLoader gcl = new GroovyClassLoader();
+		String filename = gcl.getResource("script/ClassProxy.groovy").getFile();
+		File file = new File(filename);
+		GroovyObject proxy = (GroovyObject) gcl.parseClass(file ).newInstance();
+		proxy.invokeMethod("init", gcl);
+		Class res = (Class) proxy.invokeMethod("proxyToClass", "org.sirenia.domain.Naruto");
+		//Class res = gcl.defineClass("org.sirenia.domain.Naruto", buf);
+		Method[] ms = res.getDeclaredMethods();
+		Constructor c = res.getDeclaredConstructor();
+		c.setAccessible(true);
+		Object target = c.newInstance();
+		Method m = res.getDeclaredMethod("addDate", Date.class,int.class);
+		m.setAccessible(true);
+		Object r = m.invoke(target, null,1);
+		System.out.println(r);
+		System.out.println(res);
+	}
 
 	@Test
 	public void testClassPath() throws ClassNotFoundException {

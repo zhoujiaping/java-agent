@@ -17,4 +17,12 @@ public class Naruto {
 		}*/
 		return new Date();
 	}
+	
+	private static Date addDate(Date date, int num) throws FileNotFoundException, IOException{
+		/*if(naruto==null){
+			naruto = new Naruto();
+			return naruto.luoxuanwan(date, num);
+		}*/
+		return new Date();
+	}
 }
