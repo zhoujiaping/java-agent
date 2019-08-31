@@ -24,41 +24,15 @@ public abstract class AssistInvoker {
 		@Override
 		public Object invoke1(String selfClassName, Object self, String method, Class<?>[] types, Object[] args)
 				throws Throwable {
-			// MethodHandle
 			Class<?> selfClass = Class.forName(selfClassName);
 			Method proceed = selfClass.getDeclaredMethod(method + methodSuffix, types);
 			if (!proceed.isAccessible()) {
 				proceed.setAccessible(true);
 			}
 			//Method thisMethod = selfClass.getDeclaredMethod(method, types);
-			return proceed(self,proceed,args);
-			//return proceed.invoke(self, args);
+			return proceed.invoke(self, args);
 		}
 	};
-
-	/*
-	 * 解决 子类、父类有相同方法时，使用子类对象，调用父类方法，实际上调用的还是子类方法的问题。
-	 * https://www.jianshu.com/p/63691220f81f http://www.it1352.com/956952.html
-	 */
-	public static Object proceed(Object self, Method method, Object args) throws Throwable {
-		Class<?> decCls = method.getDeclaringClass();
-		MethodType mt = MethodType.methodType(method.getReturnType(), method.getParameterTypes());
-		Class<Lookup> lookupClass = MethodHandles.Lookup.class;
-		Constructor<Lookup> constructor = lookupClass.getDeclaredConstructor(Class.class, int.class);
-		if (!constructor.isAccessible()) {
-			constructor.setAccessible(true);
-		}
-		int mod = method.getModifiers();
-		Lookup lookup = constructor.newInstance(decCls,
-				Lookup.PRIVATE | Lookup.PACKAGE | Lookup.PROTECTED | Lookup.PUBLIC);
-		MethodHandle mh;
-		if (Modifier.isStatic(mod)) {
-			mh = lookup.findStatic(decCls, method.getName(), mt);
-		} else {
-			mh = lookup.findSpecial(decCls, method.getName(), mt, decCls);
-		}
-		return mh.bindTo(self).invokeWithArguments(args);
-	}
 
 	/**
 	 * make method name different
@@ -69,7 +43,7 @@ public abstract class AssistInvoker {
 		// System.out.println(selfClass.getName());
 		// System.out.println(AssistInvoker.class.getClassLoader());
 		if (self != null && !selfClassName.equals(self.getClass().getName())) {
-			System.out.println("");
+			System.err.println("warn：方法执行的对象不是声明该方法的类的实例！");
 		}
 		return ivk.invoke1(selfClassName, self, method, types, args);
 	}
@@ -86,8 +60,7 @@ public abstract class AssistInvoker {
 	}
 
 	public Object invoke2(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
-		return proceed(self,proceed,args);
-		//return proceed.invoke(self, args);
+		return proceed.invoke(self, args);
 	}
 
 }

@@ -1,9 +1,7 @@
-import javassist.ByteArrayClassPath
 import javassist.CtField
 
 import java.lang.reflect.Modifier
 import java.security.ProtectionDomain
-import java.util.Map
 
 import javassist.ClassPool
 import javassist.CtClass
@@ -11,11 +9,9 @@ import javassist.CtMethod
 import javassist.CtNewMethod
 import javassist.LoaderClassPath
 import org.sirenia.agent.AssistInvoker
-import org.codehaus.groovy.control.CompilerConfiguration
 import org.sirenia.agent.LastModCacheUtil
 
 import java.lang.reflect.Method
-import java.util.concurrent.ConcurrentHashMap
 import org.sirenia.agent.JavaAgent
 
 class ClassProxy {
@@ -59,7 +55,7 @@ class ClassProxy {
 			}
 
 			private Object doInvoke(String selfClassName,Object self ,String method,Class[] types, Object[] args) {
-				//println "ivk=====> $selfClass,$method,$args"
+				//println "ivk=====> $selfClassName,$method,$args"
 				Class selfClass = Class.forName(selfClassName)
 				logger.info "ivk=====> $selfClass,$method,$args"
 				//println self.getClass().classLoader
@@ -80,8 +76,7 @@ class ClassProxy {
 				}
 				if (!file.exists()) {
 					logger.info("${file} not found")
-					return AssistInvoker.proceed(self,proceed,args)
-					//return proceed.invoke(self, args)
+					return proceed.invoke(self, args)
 				}
 
 				def onExpire = {
@@ -104,13 +99,11 @@ class ClassProxy {
 						logger.info("ivk proxy=====> ${cn}#$methodName-invoke")
 						return proxy."${methodName}-invoke"(*ivkArgs)
 					} else {
-						return AssistInvoker.proceed(self,proceed,args)
-						//return proceed.invoke(self, args)
+						return proceed.invoke(self, args)
 					}
 				}
 			}
 		}
-		ivk = AssistInvoker.defaultIvk
 		AssistInvoker.ivkMap.put(ctClass.name, ivk)
 		//ctClass.toClass()
 		//ctClass.toBytecode()
@@ -163,7 +156,6 @@ class ClassProxy {
 			if (Modifier.isStatic(mod)) {
 				body = '{return ($r)$proceed("'+className+'",null,"' + methodName + '",$sig,$args);}'
 			} else {
-				//使用$class，有时候获取的class是父类或者子类。
 				//body = '{return ($r)$proceed($class,$0,"' + methodName + '",$sig,$args);}'
 				body = '{return ($r)$proceed("'+className+'",$0,"' + methodName + '",$sig,$args);}'
 			}

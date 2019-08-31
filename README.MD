@@ -192,6 +192,26 @@ https://blog.csdn.net/u013476542/article/details/53242050
 Caused by: java.lang.ClassFormatError: Arguments can't fit into locals in class file 
 不能代理常量类
 
+子类、父类有相同方法的问题
+class parentClass{
+    retType method(argTypes){
+        ...
+        super.method(args);//如果parentClass被代理，那么这里的super就会变成this。
+        ...
+    }
+}
+class subClass{
+    retType method(argTypes){
+        ...
+        ...
+    }
+}
+如果代理parentClass，并且在代理方法中调用proceed.invoke(m,args),
+将会导致死循环或者bug。
+解决方法：
+使用MethodHandles可以解决，但是比较麻烦，容易引入bug。
+所以该项目不支持这种情况做代理。
+
 
 软件开发和测试的 30 个最佳实践
 https://baijiahao.baidu.com/s?id=1593597517685646565&wfr=spider&for=pc

@@ -30,8 +30,7 @@ def "invoke-invoke"(ivkSelf,ivkThisMethod,ivkProceed,ivkArgs){
 
 		if(!file.exists()){
 			logger.info("${file} not found")
-			return AssistInvoker.proceed(ivkSelf,ivkProceed,ivkArgs)
-			//			return ivkProceed.invoke(ivkSelf, ivkArgs)
+			return ivkProceed.invoke(ivkSelf, ivkArgs)
 		}
 
 		def onExpire = {
@@ -52,13 +51,11 @@ def "invoke-invoke"(ivkSelf,ivkThisMethod,ivkProceed,ivkArgs){
 			logger.info("ivk proxy(dubbo)=====> ${className}#$methodName-invoke ${ivkArgs}")
 			return proxy."${methodName}-invoke"(*ivkArgs)
 		}else {
-			return AssistInvoker.proceed(ivkSelf,ivkProceed,ivkArgs)
-			//return ivkProceed.invoke(ivkSelf, ivkArgs)
+			return ivkProceed.invoke(ivkSelf, ivkArgs)
 		}
 
 	}else{
-		return AssistInvoker.proceed(ivkSelf,ivkProceed,ivkArgs)
-		//ivkProceed.invoke(ivkSelf,ivkArgs)
+		ivkProceed.invoke(ivkSelf,ivkArgs)
 	}
 }
 return this
