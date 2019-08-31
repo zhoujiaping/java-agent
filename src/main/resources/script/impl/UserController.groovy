@@ -13,7 +13,8 @@ def 'login-invoke'(self, thisMethod, proceed, args){
 	logger.info "###################################login#invoke"
 	def session = args[2]
 	session.setAttribute('whosyourdaddy','开启无敌模式')
-	proceed.invoke(self,args)
+	//proceed.invoke(self,args)
+	org.sirenia.agent.AssistInvoker.proceed(self,proceed,args)
 }*/
 def hello(){
 	logger.info 'hello'+"*"*10

@@ -24,12 +24,13 @@ class ClassProxy {
 	ClassLoader cl
 	def methodSuffix = '_pxy'
 	def ivkName = AssistInvoker.class.name
-	def shell = new GroovyShell()
+	def shell
 	ClassPool pool
 	def init(ClassLoader cl0){
 		cl = cl0
 		pool = ClassPool.getDefault()
 		pool.appendClassPath(new LoaderClassPath(cl))
+		shell = new GroovyShell(cl0)
 	}
 	def proxyToClass(String className){
 		def ct = proxy(className,null,null)
@@ -48,17 +49,18 @@ class ClassProxy {
 			/*code below will be trans to bytecode, it will load by webappclassloader,
 			so, donot use code which webappclassloader cannot find!
 			*/
-			/*def invoke(Class selfClass,Object self,String method,Class[] types,Object[] args){
+			def invoke1(String selfClassName,Object self,String method,Class[] types,Object[] args){
 				try{
-					return doInvoke(selfClass,self, method,  types, args)
+					return doInvoke(selfClassName,self, method,  types, args)
 				}catch(e){
-					logger.error("$selfClass,$self,$method,$types,$args")
+					logger.error("$selfClassName,$self,$method,$types,$args")
 					throw e
 				}
-			}*/
+			}
 
-			private Object doInvoke(Class selfClass,Object self ,String method,Class[] types, Object[] args) {
+			private Object doInvoke(String selfClassName,Object self ,String method,Class[] types, Object[] args) {
 				//println "ivk=====> $selfClass,$method,$args"
+				Class selfClass = Class.forName(selfClassName)
 				logger.info "ivk=====> $selfClass,$method,$args"
 				//println self.getClass().classLoader
 				//println selfClass.classLoader
@@ -78,7 +80,8 @@ class ClassProxy {
 				}
 				if (!file.exists()) {
 					logger.info("${file} not found")
-					return proceed.invoke(self, args)
+					return AssistInvoker.proceed(self,proceed,args)
+					//return proceed.invoke(self, args)
 				}
 
 				def onExpire = {
@@ -101,11 +104,13 @@ class ClassProxy {
 						logger.info("ivk proxy=====> ${cn}#$methodName-invoke")
 						return proxy."${methodName}-invoke"(*ivkArgs)
 					} else {
-						return proceed.invoke(self, args)
+						return AssistInvoker.proceed(self,proceed,args)
+						//return proceed.invoke(self, args)
 					}
 				}
 			}
 		}
+		ivk = AssistInvoker.defaultIvk
 		AssistInvoker.ivkMap.put(ctClass.name, ivk)
 		//ctClass.toClass()
 		//ctClass.toBytecode()
@@ -128,7 +133,7 @@ class ClassProxy {
         添加一个标记字段，如果已经被我们代理过，就不再代理。
         */
 		try{
-			ct.getField("_pxy")
+			ct.getDeclaredField("_pxy")
 			return null
 		}catch(javassist.NotFoundException e){
 			logger.info("transform => $className")
@@ -156,11 +161,13 @@ class ClassProxy {
 			ct.addMethod(copyMethod)
 			String body = ""
 			if (Modifier.isStatic(mod)) {
-				body = '{return ($r)$proceed($class,null,"' + methodName + '",$sig,$args);}'
+				body = '{return ($r)$proceed("'+className+'",null,"' + methodName + '",$sig,$args);}'
 			} else {
-				body = '{return ($r)$proceed($class,$0,"' + methodName + '",$sig,$args);}'
+				//使用$class，有时候获取的class是父类或者子类。
+				//body = '{return ($r)$proceed($class,$0,"' + methodName + '",$sig,$args);}'
+				body = '{return ($r)$proceed("'+className+'",$0,"' + methodName + '",$sig,$args);}'
 			}
-			method.setBody(body, ivkName, "invokeIvk")
+			method.setBody(body, ivkName, "invoke")
         }
         // Class<?> c = ct.toClass()
         // ct.writeFile("d:/")

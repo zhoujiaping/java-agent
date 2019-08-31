@@ -1,6 +1,7 @@
 package script
 
 import org.sirenia.agent.JavaAgent
+import org.sirenia.agent.AssistInvoker
 import org.sirenia.agent.LastModCacheUtil
 /**
 实现远程dubbo服务的代理。远程服务即使没有注册到注册中心也可以。
@@ -29,7 +30,8 @@ def "invoke-invoke"(ivkSelf,ivkThisMethod,ivkProceed,ivkArgs){
 
 		if(!file.exists()){
 			logger.info("${file} not found")
-			return ivkProceed.invoke(ivkSelf, ivkArgs)
+			return AssistInvoker.proceed(ivkSelf,ivkProceed,ivkArgs)
+			//			return ivkProceed.invoke(ivkSelf, ivkArgs)
 		}
 
 		def onExpire = {
@@ -50,11 +52,13 @@ def "invoke-invoke"(ivkSelf,ivkThisMethod,ivkProceed,ivkArgs){
 			logger.info("ivk proxy(dubbo)=====> ${className}#$methodName-invoke ${ivkArgs}")
 			return proxy."${methodName}-invoke"(*ivkArgs)
 		}else {
-			return ivkProceed.invoke(ivkSelf, ivkArgs)
+			return AssistInvoker.proceed(ivkSelf,ivkProceed,ivkArgs)
+			//return ivkProceed.invoke(ivkSelf, ivkArgs)
 		}
 
 	}else{
-		ivkProceed.invoke(ivkSelf,ivkArgs)
+		return AssistInvoker.proceed(ivkSelf,ivkProceed,ivkArgs)
+		//ivkProceed.invoke(ivkSelf,ivkArgs)
 	}
 }
 return this

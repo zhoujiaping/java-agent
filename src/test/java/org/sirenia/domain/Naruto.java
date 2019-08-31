@@ -8,7 +8,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.UUID;
 
-public class Naruto {
+public class Naruto extends Shuimen{
 	public String uuid = UUID.randomUUID().toString();
 	//public static Naruto naruto;
 	public Date luoxuanwan(Date date, int num) throws FileNotFoundException, IOException{
@@ -16,7 +16,9 @@ public class Naruto {
 			naruto = new Naruto();
 			return naruto.luoxuanwan(date, num);
 		}*/
-		return new Date();
+		System.out.println("Naruto: "+this.getClass().getName());
+		//return new Date();
+		return super.luoxuanwan(date, num);
 	}
 	
 	private static Date addDate(Date date, int num) throws FileNotFoundException, IOException{
