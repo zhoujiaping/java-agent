@@ -42,8 +42,9 @@ public abstract class AssistInvoker {
 		AssistInvoker ivk = ivkMap.get(selfClassName);
 		// System.out.println(selfClass.getName());
 		// System.out.println(AssistInvoker.class.getClassLoader());
-		if (self != null && !selfClassName.equals(self.getClass().getName())) {
-			System.err.println("warn：方法执行的对象不是声明该方法的类的实例！");
+		String targetClassName = self.getClass().getName();
+		if (self != null && !selfClassName.equals(targetClassName)) {
+			System.err.println("warn：方法"+method+"执行的对象"+targetClassName+"不是声明该方法的类"+selfClassName+"的实例！");
 		}
 		return ivk.invoke1(selfClassName, self, method, types, args);
 	}

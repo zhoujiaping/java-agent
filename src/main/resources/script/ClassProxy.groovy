@@ -152,7 +152,8 @@ class ClassProxy {
 				这样会修改去掉其他修饰符
 			*/
 			//mod = mod &(~(Modifier.PUBLIC|Modifier.PROTECTED|Modifier.PRIVATE));
-			mod = AccessFlag.setPrivate(mod)
+			int accMod = AccessFlag.setPrivate(mod)
+			copyMethod.setModifiers(mod&accMod)
 			
 			ct.addMethod(copyMethod)
 			String body = ""
