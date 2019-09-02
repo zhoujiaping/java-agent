@@ -57,7 +57,7 @@ class ClassProxy {
 			private Object doInvoke(String selfClassName,Object self ,String method,Class[] types, Object[] args) {
 				//println "ivk=====> $selfClassName,$method,$args"
 				Class selfClass = Class.forName(selfClassName)
-				logger.info "ivk=====> $selfClass,$method,$args"
+				logger.info "ivk=====> $selfClassName,$method,$args"
 				//println self.getClass().classLoader
 				//println selfClass.classLoader
 				Method thisMethod = selfClass.getDeclaredMethod(method, types)
