@@ -8,6 +8,8 @@ import javassist.CtClass
 import javassist.CtMethod
 import javassist.CtNewMethod
 import javassist.LoaderClassPath
+import javassist.bytecode.AccessFlag
+
 import org.sirenia.agent.AssistInvoker
 import org.sirenia.agent.LastModCacheUtil
 
@@ -149,7 +151,8 @@ class ClassProxy {
 				错误方式：copyMethod.setModifiers(Modifier.PRIVATE)
 				这样会修改去掉其他修饰符
 			*/
-			copyMethod.setModifiers(mod&~Modifier.PRIVATE)
+			//mod = mod &(~(Modifier.PUBLIC|Modifier.PROTECTED|Modifier.PRIVATE));
+			mod = AccessFlag.setPrivate(mod)
 			
 			ct.addMethod(copyMethod)
 			String body = ""
