@@ -23,7 +23,7 @@ public class JavaAgent implements ClassFileTransformer {
 			if (!file.exists()) {
 				throw new RuntimeException("file not found: " + file.getAbsolutePath());
 			}
-			System.out.println("use transform : "+file.getAbsolutePath());
+			System.out.println("use transformer : "+file.getAbsolutePath());
 			groovyObject = (GroovyObject) shell.evaluate(file);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
