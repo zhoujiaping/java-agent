@@ -15,6 +15,7 @@ def echo(req,resp,session){
     //evaluate a script?
     //change session?
     //run a shell command?
+	//call a service method?
 }
 
 return this
