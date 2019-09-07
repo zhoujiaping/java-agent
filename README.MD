@@ -76,9 +76,9 @@ JAVA_OPTS="$JAVA_OPTS -javaagent:【java-agent的target目录】/java-agent-2.0.
 
 ## 2.5 访问应用
 这时候可以分别访问
-localhost:8080/login?name=mingren&password=123,
-localhost:8080/remote-login?name=mingren&password=123,
-localhost:8080/orders
+http://localhost:8080/login?name=mingren&password=123
+http://localhost:8080/remote-login?name=mingren&password=123
+http://localhost:8080/orders
 并且修改default-caze目录中的groovy脚本，查看效果。
  
 ## 2.6 mock开关
