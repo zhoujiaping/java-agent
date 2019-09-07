@@ -5,21 +5,27 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
 import java.security.ProtectionDomain;
 import java.util.HashSet;
+import java.util.Properties;
 import java.util.Set;
 
 import groovy.lang.GroovyObject;
 import groovy.lang.GroovyShell;
 
 public class JavaAgent implements ClassFileTransformer {
-	public static String groovyFileDir = System.getProperty("user.home") + "/mock";// "/home/wt/mock/";
-	//private volatile GroovyObject groovyObject;
+	public static String mockDir = System.getProperty("user.dir")+"/src/test/resources/mock";
 	private GroovyObject groovyObject;
 	private Set<String> mustIgnored = new HashSet<>();
 
 	public JavaAgent() {
 		try {
+			File file = null;
+			String mockDir = System.getProperty("mock.dir");
+			if(mockDir!=null && mockDir.trim().length()>0) {
+				JavaAgent.mockDir = mockDir;
+			}
+			file = new File(JavaAgent.mockDir,"agent/ClassFileTransformer.groovy");
 			GroovyShell shell = new GroovyShell();
-			File file = new File(groovyFileDir, "ClassFileTransformer.groovy");
+
 			if (!file.exists()) {
 				throw new RuntimeException("file not found: " + file.getAbsolutePath());
 			}
@@ -57,9 +63,6 @@ public class JavaAgent implements ClassFileTransformer {
 	}
 
 	public static void premain(String agentOps, Instrumentation inst) {
-		if (agentOps != null && !agentOps.trim().isEmpty()) {
-			groovyFileDir = agentOps;
-		}
 		inst.addTransformer(new JavaAgent(), true);
 	}
 

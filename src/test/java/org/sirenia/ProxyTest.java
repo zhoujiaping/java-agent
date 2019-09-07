@@ -19,7 +19,7 @@ public class ProxyTest {
 	@Test
 	public void testProxyEnum() throws Exception{
 		GroovyClassLoader gcl = new GroovyClassLoader();
-		String filename = gcl.getResource("script/ClassProxy.groovy").getFile();
+		String filename = gcl.getResource("mock/agent/ClassProxy.groovy").getFile();
 		File file = new File(filename);
 		GroovyObject proxy = (GroovyObject) gcl.parseClass(file ).newInstance();
 		proxy.invokeMethod("init", gcl);
@@ -33,7 +33,7 @@ public class ProxyTest {
 	@Test
 	public void testProxyFinalClass()throws Exception{
 		GroovyClassLoader gcl = new GroovyClassLoader();
-		String filename = gcl.getResource("script/ClassProxy.groovy").getFile();
+		String filename = gcl.getResource("mock/agent/ClassProxy.groovy").getFile();
 		File file = new File(filename);
 		GroovyObject proxy = (GroovyObject) gcl.parseClass(file ).newInstance();
 		proxy.invokeMethod("init", gcl);
@@ -58,7 +58,7 @@ public class ProxyTest {
 	@Test
 	public void testProxyFinalClass2()throws Exception{
 		GroovyClassLoader gcl = new GroovyClassLoader();
-		String filename = gcl.getResource("script/ClassProxy.groovy").getFile();
+		String filename = gcl.getResource("mock/agent/ClassProxy.groovy").getFile();
 		File file = new File(filename);
 		GroovyObject proxy = (GroovyObject) gcl.parseClass(file ).newInstance();
 		proxy.invokeMethod("init", gcl);

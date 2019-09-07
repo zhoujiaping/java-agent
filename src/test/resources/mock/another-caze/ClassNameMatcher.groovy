@@ -1,5 +1,5 @@
 //unsupport slf4j,because it is not in webappclassloader env
-
+//if you modify this file, it works only when the server restarted!!!
 includes = new HashSet()
 excludes = new HashSet()
 matchReg = /org.wt.*(Mapper|Service|Component|Controller).*/
@@ -9,7 +9,7 @@ org.wt.util.CryptUtils
 org.wt.model.User
 org.wt.aop.AspectTest
 """
-includes = classes.trim().split(/\s+/).findAll{!it.startsWith("//")} as HashSet
+includes = classes.trim().split(/\s+/) as HashSet
 includes << "com.alibaba.dubbo.rpc.proxy.InvokerInvocationHandler" //通过代理dubbo的InvokerInvocationHandler，实现对远程dubbo服务的代理
 
 boolean match(String className){

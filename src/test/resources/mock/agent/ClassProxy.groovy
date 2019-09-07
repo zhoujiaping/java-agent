@@ -1,41 +1,43 @@
-import javassist.CtField
+package mock.agent
 
+import javassist.CtField
 import java.lang.reflect.Modifier
 import java.security.ProtectionDomain
-
 import javassist.ClassPool
 import javassist.CtClass
 import javassist.CtMethod
 import javassist.CtNewMethod
 import javassist.LoaderClassPath
 import javassist.bytecode.AccessFlag
-
 import org.sirenia.agent.AssistInvoker
-import org.sirenia.agent.LastModCacheUtil
-
+import org.sirenia.agent.LastModCache
+import org.sirenia.agent.LastModCache.OnExpire
 import java.lang.reflect.Method
 import org.sirenia.agent.JavaAgent
 
 class ClassProxy {
 
-	def logger = org.slf4j.LoggerFactory.getLogger('ClassProxy#proxy')
-	ClassLoader cl
+	def logger = org.slf4j.LoggerFactory.getLogger('ClassProxyLogger')
+	def cl
+	def shell
 	def methodSuffix = '_pxy'
 	def ivkName = AssistInvoker.class.name
-	def shell
-	ClassPool pool
+	def mockCazeFile = new File(JavaAgent.mockDir,"agent/MockCaze.groovy")
+	def proxysCache
+	def cazeCache = new LastModCache()
+	def onMockCazeExpire = {
+		proxysCache = new LastModCache()
+		def newMockCaze = shell.evaluate(mockCazeFile)
+		logger.info "change mock caze => from ${it?.obj?.caze} to ${newMockCaze.caze}"
+		newMockCaze
+	} as OnExpire
+	def pool
+
 	def init(ClassLoader cl0){
 		cl = cl0
 		pool = ClassPool.getDefault()
 		pool.appendClassPath(new LoaderClassPath(cl))
 		shell = new GroovyShell(cl0)
-	}
-	def proxyToClass(String className){
-		def ct = proxy(className,null,null)
-		if(ct){
-			return ct.toClass()
-		}
-		return Class.forName(className,true,cl)
 	}
 
 	def proxy(String className, ProtectionDomain domain, byte[] bytes){
@@ -44,8 +46,8 @@ class ClassProxy {
 			return null
 		}
 		def ivk = new AssistInvoker(){
-			/*code below will be trans to bytecode, it will load by webappclassloader,
-			so, donot use code which webappclassloader cannot find!
+			/*code will be trans to bytecode, it will load by webAppClassloader,
+			so, do not use code which webAppClassloader cannot find!
 			*/
 			def invoke1(String selfClassName,Object self,String method,Class[] types,Object[] args){
 				try{
@@ -67,31 +69,39 @@ class ClassProxy {
 				if (!proceed.isAccessible()) {
 					proceed.setAccessible(true)
 				}
+
+				def mockCaze = cazeCache.get(mockCazeFile.getAbsolutePath(), onMockCazeExpire)
 				//
 				def cn = selfClass.name
 				def sn = cn.split(/\./)[-1]
-				File file
-				if(sn =='ClassGenerator' || sn == 'InvokerInvocationHandler'){
-					file = new File(JavaAgent.groovyFileDir, "${sn}.groovy")
+
+				def methodsFile = new File(JavaAgent.mockDir, "${mockCaze.caze}/Methods.groovy")
+				def onMethodsExpire = {
+					def newMethods = shell.evaluate(methodsFile)
+					if(!newMethods){
+						throw new RuntimeException("evaluate Methods.groovy returns null, forgot return a value?")
+					}
+					newMethods
+				} as OnExpire
+				def proxys = proxysCache.get(methodsFile.getAbsolutePath(),onMethodsExpire)
+
+				def proxy
+				if(sn == 'InvokerInvocationHandler'){
+					def dubboHandlerFile = new File(JavaAgent.mockDir, "${mockCaze.caze}/InvokerInvocationHandler.groovy")
+					def onDubboHanlderExpire = {
+						shell.evaluate(dubboHandlerFile)
+					} as OnExpire
+					def dubboHanlder = proxysCache.get(dubboHandlerFile.getAbsolutePath(),onDubboHanlderExpire)
+					dubboHanlder.proxys = proxys
+					proxy = dubboHanlder
 				}else{
-					file = new File(JavaAgent.groovyFileDir, "impl/${sn}.groovy")
-				}
-				if (!file.exists()) {
-					logger.info("${file} not found")
-					return proceed.invoke(self, args)
+					if(!proxys[sn]){
+						return proceed.invoke(self, args)
+					}
+					proxy = proxys[sn]
 				}
 
-				def onExpire = {
-					def script = shell.evaluate(file)
-					if(!script){
-						throw new RuntimeException("evaluate script returns null, forgot return this?")
-					}
-					script
-				} as LastModCacheUtil.OnExpire
-				def proxy = LastModCacheUtil.get(file.getAbsolutePath(), onExpire)
-				proxy.metaClass.logger = org.slf4j.LoggerFactory.getLogger("${sn}#proxy")
-				proxy.metaClass.shell = shell
-				def methodName = thisMethod.getName()
+				def methodName = thisMethod.name
 				if (proxy.metaClass.respondsTo(proxy, methodName, *args)) {
 					logger.info("ivk proxy=====> ${cn}#$methodName")
 					return proxy."$methodName"(*args)
