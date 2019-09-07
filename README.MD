@@ -32,7 +32,7 @@ java5引入了一个api，叫做Instrument，它支持在jvm启动时拦截类�
 由于其原理是基于jvm级别的代理，所以普通java项目和web项目的使用方法差不多。
 这里只介绍web项目部署在tomcat下的使用方法。
 
-比如我们用于https://github.com/zhoujiaping/java-agent-web这个项目
+比如我们用于https://github.com/zhoujiaping/java-agent-web 这个项目
 
 测试环境和开放环境在配置上有一点点不同，这里只介绍开发环境的使用（原谅我懒......）。
 ## 2.1 下载,安装
