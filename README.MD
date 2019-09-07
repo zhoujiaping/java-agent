@@ -3,6 +3,8 @@
 * 单元测试mock
 * 联调、集成测试mock
 * 支持mock静态方法，final方法，私有方法
+* 非常容易实现spring bean的mock
+* 支持对dubbo接口的mock
 ## 1.2 原理
 java5引入了一个api，叫做Instrument，它支持在jvm启动时拦截类的加载，
 我们可以在这个时机对加载的字节码进行代理、增强。

@@ -50,6 +50,8 @@ proxys."UserController" = new Object(){
         /*
         拦截了controller的方法，获取session对象，往session中设置值。
         我们可以在web项目中提供一个空实现的controller,拦截它，通过这种方式随便修改会话，准备测试环境。
+        甚至在mock方法中调用linux shell命令，使用groovy的sql包访问数据库，使用http发送请求（实现远程mock），
+        拷贝文件，修改配置，and so on...
          */
         session.setAttribute('whosyourdaddy','开启无敌模式')
         def json = new JSONObject()
@@ -78,7 +80,11 @@ proxys.RemoteUserService = new Object(){
         userService.login(name,pwd)
     }
 }
-
+/**
+ * 你可以在项目中定义一个spring bean的切面，切面方法中调用joinoint.proceed(),
+ * 这样不会影响项目的业务逻辑，
+ * 然后在这里拦截，接下来就可以对spring bean进行mock。
+ * */
 proxys.AspectTest = new Object(){
     /**
      * if you just want to proxy spring beans,
