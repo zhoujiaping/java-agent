@@ -2,14 +2,19 @@
 ## 1.1 用途
 * 单元测试mock
 * 联调、集成测试mock
+* 支持mock静态方法，final方法，私有方法
 ## 1.2 原理
 java5引入了一个api，叫做Instrument，它支持在jvm启动时拦截类的加载，
 我们可以在这个时机对加载的字节码进行代理、增强。
 
 该项目就是这么做的，在jvm加载类的时候，通过字节码工具包javassist，
-实现了代理功能。
+修改了字节码。
 
-在代理的方法中，我们动态解析groovy代码，调用groovy方法。
+方法执行时，并不执行原来的代码，而是动态解析groovy代码，调用groovy方法。
+
+我们可以在相关的groovy代码中配置哪些类的方法执行groovy方法，哪些类的方法执行原来的逻辑。
+
+当然，在groovy方法中，我们可以执行原有的逻辑。
 
 这样就可以在不需用重新启动系统的情况下，修改方法的行为。
 
@@ -26,48 +31,63 @@ java5引入了一个api，叫做Instrument，它支持在jvm启动时拦截类�
 # 2 使用方法
 由于其原理是基于jvm级别的代理，所以普通java项目和web项目的使用方法差不多。
 这里只介绍web项目部署在tomcat下的使用方法。
-## 2.1 打包
 
-执行mvn package将项目打包。
+比如我们用于https://github.com/zhoujiaping/java-agent-web这个项目
 
-打包后有两个jar包，较小的那个是没有将依赖一起打包的，较大的一个是将依赖一起打包了的，
-我们需要后面那个，比如打包后文件名为java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar,
+测试环境和开放环境在配置上有一点点不同，这里只介绍开发环境的使用（原谅我懒......）。
+## 2.1 下载,安装
+从github上clone两个项目，java-agent（这个实现mock功能的）和java-agent-web（这个用于演示mock的使用），import到idea/eclipse。
 
-将java-agent-0.0.1-SNAPSHOT-jar-with-dependencies.jar拷贝到/home/wt/mock目录下（随便哪个目录，有权限就行）。
-## 2.2 配置
-修改tomcat的bin目录下的setenv.sh文件，添加jvm启动参数，如下：
-JAVA_OPTS="$JAVA_OPTS -javaagent:/home/wt/mock/java-agent-0.0.1-SNAPSHOT-with-3.23.1-GA.jar=/home/wt/mock/"
-（后面那个目录跟前面的目录无关，我们称后面那个目录/home/wt/mock为mock脚本目录）。
+对java-agent执行 mvn install（或者mvn package）。
 
-将java-agent项目resources/script目录下的文件拷贝到mock脚本目录
-编辑agent.groovy文件，修改init方法中classes变量的值，即配置我们需要mock哪些类
-（注意：你要mock的方法在哪个类里面声明的，就配置哪个类的类全名）。
+执行后会有两个jar包，较小的那个是没有将依赖一起打包的，较大的一个是将依赖一起打包了的，
+我们需要后面那个，比如打包后文件名为java-agent-2.0.1-SNAPSHOT-jar-with-dependencies.jar。
 
-如果想通过某些规则mock指定的包或者类，可以修改doTransform方法中参与计算matchReg的正则表达式
-（或者写groovy代码自定义规则）。
+## 2.2 配置jvm启动参数
+在java-agent-web这个工程中，有一个文件，src/test/java/org/wt/JettyBootstrap.java。
+这个是通过main方法启动web应用的（并不一定要这样启动，这里只是方式之一）。
 
-比如我们需要mock的类是org.wt.service.impl.HelloServiceImpl。
+配置jvm启动参数，例如：
+JAVA_OPTS="$JAVA_OPTS -javaagent:【java-agent的target目录】/java-agent-2.0.1-SNAPSHOT-with-dependencies.jar"
+
+在java-agent-web工程中，有一个目录，src/test/resources/mock。该目录存放mock需要的groovy代码。
+如果想换一个目录，通过-Dmock.dir=【目录】指定。
+
+编辑agent/MockCaze.groovy文件，配置使用哪个测试用例（将会应用【用例名】-caze目录下的groovy代码）。
+比如我们使用default-caze。
+
+编辑default-caze/ClassNameMathcer.groovy，配置规则，哪些类需要增强。
+
 ## 2.3 启动
-启动tomcat
-## 2.4 编写脚本
+执行JettyBootstrap#main。
+
+## 2.4 编写mock代码
 这一步也可以在启动tomcat之前进行。如果你希望mock启动tomcat后立即执行的一些方法，比如spring执行bean的init方法，
 你需要将这一步提前。
 
-在/home/wt/mock目录下创建文件HelloServiceImpl.groovy(文件名默认用你要mock那个类的简单类名+'.groovy')。
-假如我们需要mock它的方法public String hello(String name)，那么我们在里面声明一个签名相同的方法，方法体写mock逻辑。
+编辑default-caze/Methods.groovy，定义各个方法的mock逻辑。
+如果某些类不需要mock，或者某些方法不需要mock，在Methods.groovy不要配置就行。
 
-调用这个方法的时候，会应用文件中最新的内容,不需要重启应用（所有文件都时如此，除了agent.groovy）。
+调用这个方法的时候，会应用文件中最新的内容,不需要重启应用
+（除了agent/ClassFileTransformer.groovy和agent/ClassProxy.groovy，
+所有的groovy代码修改后不重启应用也可以生效）。
 
-其余的不需要mock的方法不用管，匹配不到方法就会执行原有的方法。
+如果需要mock的是dubbo接口，需要在default-caze/Invocationhandler.groovy中配置。
 
-如果mock的时dubbo接口，需要在Invocationhandler.groovy中配置接口名或者规则。
-## 2.5 mock开关
+## 2.5 访问应用
+这时候可以分别访问
+localhost:8080/login?name=mingren&password=123,
+localhost:8080/remote-login?name=mingren&password=123,
+localhost:8080/orders
+并且修改default-caze目录中的groovy脚本，查看效果。
+ 
+## 2.6 mock开关
 如果你想关闭所有mock，可以
-* 去调tomcat相关的jvm启动参数，重启tomcat。
-* 也可以修改agent.groovy,在doTransform方法的第一行写上return null，然后重启tomcat。
-* 也可以修改agent.groovy逻辑，自己加一个全局开关。
+* 去调JettyBootstrap#main的jvm启动参数，重启应用。
+* 或者其他方式，这里就不详细介绍了。
 
-如果你想关闭对某个类/接口的mock，可以删除对应的groovy文件，或者将其重命名。
+如果你想关闭对某个类/接口/方法的mock，可以通过修改ClassNameMatcher.groovy,
+InvokerInvocationHandler.groovy,Methods.groovy其中的一个或多个实现。
 
 如果你想关闭对某个方法的mock，可以修改方法签名，让它无法匹配。
 # 3 使用场景
@@ -86,6 +106,8 @@ JAVA_OPTS="$JAVA_OPTS -javaagent:/home/wt/mock/java-agent-0.0.1-SNAPSHOT-with-3.
 比如造的数据不完整，执行时无法关联导致中断。
 
 比如需要测试一些异常场景。
+
+比如有些需要级联mock的场景。
 
 比如......
 
@@ -120,12 +142,15 @@ JAVA_OPTS="$JAVA_OPTS -javaagent:/home/wt/mock/java-agent-0.0.1-SNAPSHOT-with-3.
 * 普通类普通方法
 
 对User#getName进行mock
+
 * 普通类静态方法
 
 对CryptUtils#enc进行mock
+
 * 普通类final方法
 
 同上
+
 * 有声明接口的spring bean
 
 对UserServiceImpl#login进行mock
@@ -141,21 +166,41 @@ JAVA_OPTS="$JAVA_OPTS -javaagent:/home/wt/mock/java-agent-0.0.1-SNAPSHOT-with-3.
 * dubbo服务
 
 对RemoteService#login进行mock
+
 * 调用原有逻辑
 
 对UserController#login进行mock
+
 * mock文件中使用目标项目中的类
+
 * mock文件中使用spring上下文 
+
 * and so on...
+
 # 5 注意事项
+
 * 不要轻易代理容器（比如tomcat）的类
+
 * 不支持mock接口默认方法
+
+* 默认我们的web项目中使用了slf4j。如果没有，则需要修改groovy代码。
+
+* 默认我们的web项目中使用了javassist，并且其api和ClassProxy.groovy中调用的api兼容。
+如果不是，需要修改groovy代码。
+
 # 6 最佳实践
+
 * 每个web应用，使用一个mock目录。
+
 * mock范围，不要太大，也不要太小。太大了会影响性能，太小了会导致添加新的mock方法可能需要重启。
-建议对业务中定义的所有spring bean纳入mock范围。
+建议在开发环境mock大范围，测试环境mock小范围。
+
+* 建议对业务中定义的所有spring bean纳入mock范围。
+
 * 对于已经发现的bug，开发人员通过mock，在本地联调通过后再发布，避免同一个bug出现多次的问题。
+
 * mock方法中打印标记日志，区分正常的方法调用。
+
 * and so on（欢迎参与最佳实践讨论）
 
 
@@ -166,23 +211,11 @@ JAVA_OPTS="$JAVA_OPTS -javaagent:/home/wt/mock/java-agent-0.0.1-SNAPSHOT-with-3.
 比如代理WebappClassLoaderBase#loadClass方法会导致stackoverflow。loadClass方法调用MyMethodProxy#invoke，
 MyMethodProxy#invoke又会调用Class#forName，Class#forName又会调用WebappClassLoaderBase#loadClass。
 所以，如果需要修改classloader，请通过别的方式实现。
-* web项目中如果有用到dubbo，可能会报错
-javassist编译错误，找不到xxx_proxy方法。
-解决办法，web项目中配置
-<aop:aspectj-autoproxy/>
-或者<aop:aspectj-autoproxy proxy-target-class="true" />
-虽然具体细节不太清楚。
 
-* Classool问题
-MyMethodProxy,里面用的ClassPool，和dubbo用的ClassPool是不一样的。
-我们增强的字节码，并不会在dubbo的ClassPool中。
-dubbo拿到的对象是spring管理的bean，确实是我们增强了的。
-但是它增强时，需要读取字节码文件（class文件）。我们增强了class，但是并没有写到class文件中。
-估计是使用aop:aspectj-autoproxy会改变一些实现方式。
-
-* 已知异常及解决办法
+* 已经解决的问题
 异常：has illegal modifiers
 解决办法：确认javassist包的版本和被代理的包依赖的javassist版本兼容。
+（已解决，java-agent不自己引入javassist，而是使用web工程提供的javassist）
 
 java.lang.VerifyError: Inconsistent stackmap frames at branch target 48
 https://blog.csdn.net/u013476542/article/details/53242050
@@ -190,7 +223,7 @@ https://blog.csdn.net/u013476542/article/details/53242050
 如果是jdk8：-noverify
 
 Caused by: java.lang.ClassFormatError: Arguments can't fit into locals in class file 
-不能代理常量类
+不能代理常量类（已解决，代理时已经做了判断）
 
 子类、父类有相同方法的问题
 class parentClass{
@@ -246,6 +279,6 @@ so，java-agent中不要依赖太多的包，避免产生和java-agent-web项目
 
 版本日志
 0.0.1-SNAPSHOT
-
-
-
+实现了一个基本的mock框架。
+2.0.1-SNAPSHOT
+修改了groovy代码的管理方式，添加了切换测试用例的支持。
