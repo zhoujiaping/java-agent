@@ -6,7 +6,9 @@
  * matchReg:根据正则表达式匹配类名决定哪些类要被增强
  * */
 includes = new HashSet()
-excludes = new HashSet()
+excludes = """
+
+""".trim().split(/\s+/) as HashSet
 matchReg = /org.wt.*(Mapper|Service|Component|Controller).*/
 //技巧：通过在类名前面加上一些字符，使它在HashSet中的值，匹配不到任何类名，达到将其注释掉的效果。
 def classes = """
@@ -26,7 +28,7 @@ boolean match(String className){
     /*if (className.startsWith("org.sirenia")) {
         return false
     }*/
-    if (className.contains '$'){
+    if (className.contains('$')){
         return false
     }
     //这里配置class name regexp to proxy的正则表达式，这样在mock时，不需要重启应用。 ==~ 运算符用于正则匹配
