@@ -5,52 +5,54 @@ package mock.agent
 */
 import org.slf4j.LoggerFactory
 
-def handler = new Expando()
-handler.logger = LoggerFactory.getLogger("InvokerInvocationHandlerLogger")
-handler.includes = """
+/**
+ * 尽量不要给metaClass添加字段来保存数据，容易出bug（比如重新解析类后，即使重新给metaClass.proxys赋值，也会出现proxys还是旧值的情况）。
+ */
+class InvokerInvocationHandler{
+	def logger = LoggerFactory.getLogger("InvokerInvocationHandlerLogger")
+	def timestamp = System.currentTimeMillis()
+	def includes = """
 org.wt.service.HelloService
 org.wt.service.RemoteUserService
 """.trim().split(/\s+/) as HashSet
-/**
- * 为handler动态添加一个方法，ivkSelf ,ivkThisMethod,ivkProceed,ivkArgs是其入参。
- * 参考dubbo源码，InvokerInvocationHandler#invoke。
- * params[] => target,method,args
- */
-handler.metaClass."invoke-invoke" << {
-	ivkSelf ,ivkThisMethod,ivkProceed,ivkArgs ->
-		//dubbo服务对象，方法名称，方法参数
-	def serviceTarget = ivkArgs[0]
-	def serviceMethod = ivkArgs[1]
-	def serviceArgs = ivkArgs[2]
-		//获取dubbo服务对象实现的接口，按接口名匹配
-	def matchedInterface = serviceTarget.getClass().getInterfaces().find{
-		includes.contains(it.getName())
+	def methods
+	def init(methods){
+		this.methods = methods
 	}
-	if(matchedInterface){
-		def className = matchedInterface.getName()
-		logger.info "transformer(dubbo)=> $className"
-
-		def sn = className.split(/\./)[-1]
-
-		if(!proxys[sn]){
-			return ivkProceed.invoke(ivkSelf,ivkArgs)
+	/**
+	 params[] => target,method,args
+	 */
+	def "invoke-invoke"(ivkSelf ,ivkThisMethod,ivkProceed,ivkArgs){
+		def serviceTarget = ivkArgs[0]
+		def serviceMethod = ivkArgs[1]
+		def serviceArgs = ivkArgs[2]
+		def matchedInterface = serviceTarget.getClass().getInterfaces().find{
+			includes.contains(it.getName())
 		}
-		def proxy = proxys[sn]
-		def methodName = serviceMethod.getName()
-		if (proxy.metaClass.respondsTo(proxy, methodName, *serviceArgs)) {
-			logger.info("ivk proxy(dubbo)=====> ${className}#$methodName ${ivkArgs}")
-			return proxy."$methodName"(*serviceArgs)
-		} else if (proxy.metaClass.respondsTo(proxy, "${methodName}-invoke", *ivkArgs)) {
-			logger.info("ivk proxy(dubbo)=====> ${className}#$methodName-invoke ${ivkArgs}")
-			return proxy."${methodName}-invoke"(*ivkArgs)
-		}else {
-			return ivkProceed.invoke(ivkSelf, ivkArgs)
-		}
+		if(matchedInterface){
+			def className = matchedInterface.getName()
+			logger.info "transformer(dubbo)=> $className"
 
-	}else{
-		ivkProceed.invoke(ivkSelf,ivkArgs)
+			def sn = className.split(/\./)[-1]
+			def proxys = methods.proxys
+			if(!proxys[sn]){
+				return ivkProceed.invoke(ivkSelf,ivkArgs)
+			}
+			def proxy = proxys[sn]
+			def methodName = serviceMethod.getName()
+			if (proxy.metaClass.respondsTo(proxy, methodName, *serviceArgs)) {
+				logger.info("ivk proxy(dubbo)=====> ${className}#$methodName ${ivkArgs}")
+				return proxy."$methodName"(*serviceArgs)
+			} else if (proxy.metaClass.respondsTo(proxy, "${methodName}-invoke", *ivkArgs)) {
+				logger.info("ivk proxy(dubbo)=====> ${className}#$methodName-invoke ${ivkArgs}")
+				return proxy."${methodName}-invoke"(*ivkArgs)
+			}else {
+				return ivkProceed.invoke(ivkSelf, ivkArgs)
+			}
+
+		}else{
+			ivkProceed.invoke(ivkSelf,ivkArgs)
+		}
 	}
 }
-return handler
-
 
