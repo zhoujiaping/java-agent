@@ -33,7 +33,7 @@ class ClassFileTransformer{
     }
 
     def transform0(ClassLoader classLoader, String className, ProtectionDomain domain, byte[] bytes) {
-        if (classLoader.getClass().name.contains('GroovyClassLoader')) {
+        if (classLoader.class.name.contains('GroovyClassLoader')) {
             return null
         }
 

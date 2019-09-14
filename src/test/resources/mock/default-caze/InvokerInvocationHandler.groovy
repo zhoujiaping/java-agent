@@ -23,14 +23,12 @@ org.wt.service.RemoteUserService
 	 params[] => target,method,args
 	 */
 	def "invoke-invoke"(ivkSelf ,ivkThisMethod,ivkProceed,ivkArgs){
-		def serviceTarget = ivkArgs[0]
-		def serviceMethod = ivkArgs[1]
-		def serviceArgs = ivkArgs[2]
-		def matchedInterface = serviceTarget.getClass().getInterfaces().find{
-			includes.contains(it.getName())
+		def (serviceTarget,serviceMethod,serviceArgs) = ivkArgs
+		def matchedInterface = serviceTarget.class.interfaces.find{
+			includes.contains(it.name)
 		}
 		if(matchedInterface){
-			def className = matchedInterface.getName()
+			def className = matchedInterface.name
 			logger.info "transformer(dubbo)=> $className"
 
 			def sn = className.split(/\./)[-1]
@@ -39,7 +37,7 @@ org.wt.service.RemoteUserService
 				return ivkProceed.invoke(ivkSelf,ivkArgs)
 			}
 			def proxy = proxys[sn]
-			def methodName = serviceMethod.getName()
+			def methodName = serviceMethod.name
 			if (proxy.metaClass.respondsTo(proxy, methodName, *serviceArgs)) {
 				logger.info("ivk proxy(dubbo)=====> ${className}#$methodName ${ivkArgs}")
 				return proxy."$methodName"(*serviceArgs)

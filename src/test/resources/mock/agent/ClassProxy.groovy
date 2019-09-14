@@ -150,11 +150,11 @@ class ClassProxy {
 		CtMethod[] methods = ct.getDeclaredMethods()// ct.getMethods()
 		for (int i = 0;i < methods.length;i++) {
 			CtMethod method = methods[i]
-			int mod = method.getModifiers()
+			int mod = method.modifiers
 			if(Modifier.isAbstract(mod)){
 				continue
 			}
-			String methodName = method.getName()
+			String methodName = method.name
 			if(methodName.startsWith('lambda$')){
 				continue
 			}
@@ -165,7 +165,7 @@ class ClassProxy {
 			*/
 			//mod = mod &(~(Modifier.PUBLIC|Modifier.PROTECTED|Modifier.PRIVATE));
 			int accMod = AccessFlag.setPrivate(mod)
-			copyMethod.setModifiers(mod&accMod)
+			copyMethod.modifiers = mod&accMod
 			
 			ct.addMethod(copyMethod)
 			String body = ""
