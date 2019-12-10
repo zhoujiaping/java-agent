@@ -1,0 +1,16 @@
+
+csquid:S00112#"FDefine and throw a dedicated exception instead of using a generic one.(Ò‚Òéüÿÿÿÿ
+"squid:ClassVariableVisibilityCheck"SMake mockDir a static final constant or non-public and provide accessors if needed.(½ÀÚ¨
+Fsquid:S1172B"/Remove this unused method parameter "agentOps".(Š¿âŸ
+Dsquid:S1444"-Make this "public static mockDir" field final(½ÀÚ¨
+=squid:S11685"&Return an empty array instead of null.(¥¹ï
+csquid:S00112"FDefine and throw a dedicated exception instead of using a generic one.(şÎÎÚûÿÿÿÿ
+T
+squid:S106 "9Replace this use of System.out or System.err by a logger.(ÍìÕ¼ùÿÿÿÿ
+=squid:S11682"&Return an empty array instead of null.(¥¹ï
+Usquid:UselessImportCheck"1Remove this unused import 'java.util.Properties'.(¬µ²
+T
+squid:S106;"9Replace this use of System.out or System.err by a logger.(ãÆäÑıÿÿÿÿ
+?squid:S1148="#Use a logger to log this exception.(€ÉÔ…ıÿÿÿÿ
+@squid:S3010"$Remove this assignment of "mockDir".(æ®ÄÅøÿÿÿÿ
+\squid:HiddenFieldCheck";Rename "mockDir" which hides the field declared at line 15.(£ãêO

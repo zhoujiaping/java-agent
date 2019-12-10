@@ -1,13 +1,20 @@
 package mock.agent
 
+import groovy.transform.Field
+import org.sirenia.agent.AssistInvoker
+import org.slf4j.Logger
+
 /**
 实现远程dubbo服务的代理。远程服务即使没有注册到注册中心也可以。
 */
 import org.slf4j.LoggerFactory
 
-def handler = new Expando()
-handler.logger = LoggerFactory.getLogger("InvokerInvocationHandlerLogger")
-handler.includes = """
+import java.lang.reflect.Method
+
+
+@Field logger = LoggerFactory.getLogger("InvokerInvocationHandlerLogger")
+@Field methods
+@Field includes = """
 org.wt.service.HelloService
 org.wt.service.RemoteUserService
 """.trim().split(/\s+/) as HashSet
@@ -16,11 +23,23 @@ org.wt.service.RemoteUserService
  * 参考dubbo源码，InvokerInvocationHandler#invoke。
  * params[] => target,method,args
  */
-handler.metaClass."invoke-invoke" << {
-	ivkSelf ,ivkThisMethod,ivkProceed,ivkArgs ->
+
+includes = {
+	->
+	def xml = "/project/dubbo.xml"
+	def parser = new XmlParser()
+	def beans = parser.parseText( new File(xml).text)
+	beans['dubbo:reference'].collect {
+		ref-> ref['@interface']
+	} as HashSet
+}.call()
+def init(methods){
+	this.methods = methods
+}
+def "invoke-invoke" (ivkSelf ,ivkThisMethod,ivkProceed,ivkArgs){
 		//dubbo服务对象，方法名称，方法参数
 	def serviceTarget = ivkArgs[0]
-	def serviceMethod = ivkArgs[1]
+	Method serviceMethod = ivkArgs[1]
 	def serviceArgs = ivkArgs[2]
 		//获取dubbo服务对象实现的接口，按接口名匹配
 	def matchedInterface = serviceTarget.getClass().getInterfaces().find{
@@ -31,17 +50,25 @@ handler.metaClass."invoke-invoke" << {
 		logger.info "transformer(dubbo)=> $className"
 
 		def sn = className.split(/\./)[-1]
-
-		if(!proxys[sn]){
+		def proxys = methods.proxys
+		def proxy
+		if(proxys[className]){
+			proxy = proxys[className]
+		}else if(proxys[sn]){
+			proxy = proxys[sn]
+		}else{
 			return ivkProceed.invoke(ivkSelf,ivkArgs)
 		}
-		def proxy = proxys[sn]
-		def methodName = serviceMethod.getName()
+		def methodName = serviceMethod.name
 		if (proxy.metaClass.respondsTo(proxy, methodName, *serviceArgs)) {
-			logger.info("ivk proxy(dubbo)=====> ${className}#$methodName ${ivkArgs}")
+			AssistInvoker.ifNotInvocationHandler(ivkSelf,()->{
+				logger.info("ivk proxy(dubbo)=====> ${className}#$methodName ${ivkArgs}")
+			})
 			return proxy."$methodName"(*serviceArgs)
 		} else if (proxy.metaClass.respondsTo(proxy, "${methodName}-invoke", *ivkArgs)) {
-			logger.info("ivk proxy(dubbo)=====> ${className}#$methodName-invoke ${ivkArgs}")
+			AssistInvoker.ifNotInvocationHandler(ivkSelf,()->{
+				logger.info("ivk proxy(dubbo)=====> ${className}#$methodName-invoke ${ivkArgs}")
+			})
 			return proxy."${methodName}-invoke"(*ivkArgs)
 		}else {
 			return ivkProceed.invoke(ivkSelf, ivkArgs)
@@ -51,6 +78,6 @@ handler.metaClass."invoke-invoke" << {
 		ivkProceed.invoke(ivkSelf,ivkArgs)
 	}
 }
-return handler
+return this
 
 

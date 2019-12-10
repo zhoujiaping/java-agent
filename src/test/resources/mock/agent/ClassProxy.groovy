@@ -61,7 +61,9 @@ class ClassProxy {
 				try{
 					return doInvoke(selfClassName,self, method,  types, args)
 				}catch(e){
-					logger.error("$selfClassName,$self,$method,$types,$args")
+					AssistInvoker.ifNotInvocationHandler(self,()->{
+						logger.error("$selfClassName,$self,$method,$types,$args")
+					})
 					throw e
 				}
 			}
@@ -69,7 +71,13 @@ class ClassProxy {
 			private Object doInvoke(String selfClassName,Object self ,String method,Class[] types, Object[] args) {
 				//println "ivk=====> $selfClassName,$method,$args"
 				Class selfClass = Class.forName(selfClassName)
-				logger.info "ivk=====> $selfClassName,$method,$args"
+				//如果 args里面有一个参数是this，那么打印参数的时候，就会调用它的toString方法，然后会进入invoke方法和toString方法的死循环当中。
+				if ("toString" == method && types.length == 0) {
+					return self.toString()
+				}
+				AssistInvoker.ifNotInvocationHandler(self,()->{
+					logger.info "ivk=====> $selfClassName,$method,$args"
+				})
 				//println self.getClass().classLoader
 				//println selfClass.classLoader
 				/**
@@ -104,7 +112,8 @@ class ClassProxy {
 					}
 					newMethods
 				} as OnExpire
-				def proxys = proxysCache.get(methodsFile.getAbsolutePath(),onMethodsExpire)
+				def methods = proxysCache.get(methodsFile.getAbsolutePath(),onMethodsExpire)
+				def proxys = methods.proxys
 				/**
 				 * 当前mock对象
 				 */
@@ -116,7 +125,7 @@ class ClassProxy {
 						shell.evaluate(dubboHandlerFile)
 					} as OnExpire
 					def dubboHanlder = proxysCache.get(dubboHandlerFile.getAbsolutePath(),onDubboHanlderExpire)
-					dubboHanlder.proxys = proxys
+					dubboHanlder.init methods
 					proxy = dubboHanlder
 				}else{
 					//如果mock对象集合中找不到对应的mock对象，就调用方法原有逻辑

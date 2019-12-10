@@ -1,0 +1,13 @@
+
+4squid:S2386"Make this member "protected".(©‹÷È
+asquid:CallToDeprecatedMethod"4Remove this use of "isAccessible"; it is deprecated.(„¬¢øÿÿÿÿ
+Lsquid:S1444"0Make this "public static defaultIvk" field final(ú…¸ùÿÿÿÿ
+‰"squid:ClassVariableVisibilityCheck"VMake defaultIvk a static final constant or non-public and provide accessors if needed.(ú…¸ùÿÿÿÿ
+asquid:CallToDeprecatedMethod2"4Remove this use of "isAccessible"; it is deprecated.(„¬¢øÿÿÿÿ
+csquid:S001128"FDefine and throw a dedicated exception instead of using a generic one.(¬Ë½ûÿÿÿÿ
+T
+squid:S106("9Replace this use of System.out or System.err by a logger.(÷µõİşÿÿÿÿ
+Msquid:S11728"1Remove this unused method parameter "thisMethod".(¬Ë½ûÿÿÿÿ
+bsquid:CommentedOutCodeLine%"<This block of commented-out lines of code should be removed.(æµŠ
+bsquid:CommentedOutCodeLine"<This block of commented-out lines of code should be removed.(€ÑÃœ
+wsquid:S00115"ZRename this constant name to match the regular expression '^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'.(¥™ş¤øÿÿÿÿ

@@ -253,6 +253,12 @@ https://baijiahao.baidu.com/s?id=1593597517685646565&wfr=spider&for=pc
 【译】单元测试最佳实践
 https://www.jianshu.com/p/6f496aedd080
 
+小心对InvocationHandler的实现类做代理，因为
+该实现类需要实现 invoke(Object proxy, Method method, Object[] args);
+那么打印invoke方法的参数时，会调用proxy的toString，
+而proxy的toString，又会调用代理对象的invoke方法，
+这样就容易导致死循环。
+
 
 
 # 8 经验

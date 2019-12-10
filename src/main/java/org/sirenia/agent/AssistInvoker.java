@@ -1,5 +1,8 @@
 package org.sirenia.agent;
 
+import javassist.tools.Callback;
+
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -57,4 +60,9 @@ public abstract class AssistInvoker {
 		return proceed.invoke(self, args);
 	}
 
+	public static void ifNotInvocationHandler(Object self, Callbacks.Callback00 cb) {
+		if (!(self instanceof InvocationHandler)) {
+			cb.apply();
+		}
+	}
 }

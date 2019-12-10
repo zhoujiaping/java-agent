@@ -1,5 +1,7 @@
 package mock.agent
 
+import groovy.transform.Field
+
 import java.security.ProtectionDomain
 import java.text.SimpleDateFormat
 import java.util.concurrent.ConcurrentHashMap
@@ -19,25 +21,25 @@ info"init ClassFileTransformer"
 /**
  * 执行groovy脚本的配置
  */
-config = new CompilerConfiguration()
+@Field config = new CompilerConfiguration()
 config.sourceEncoding = "UTF-8"
 /**
  * 为每个Classoader使用一个ClassProxy对象
  */
-classLoaderProxyMap = new ConcurrentHashMap()
+@Field classLoaderProxyMap = new ConcurrentHashMap()
 
 /**
  * 用于执行groovy脚本
  */
-def shell = new GroovyShell()
+@Field shell = new GroovyShell()
 /**
  * 解析groovy脚本，获得当前配置的 测试用例名称。
  */
-def mockCaze = shell.evaluate(new File(JavaAgent.mockDir,"agent/MockCaze.groovy"))
+@Field mockCaze = shell.evaluate(new File(JavaAgent.mockDir,"agent/MockCaze.groovy"))
 /**
  * 解析groovy脚本，获得 类名匹配器，只有匹配的类，才会被增强。
  */
-classNameMatcher = shell.evaluate(new File(JavaAgent.mockDir, "${mockCaze.caze}/ClassNameMatcher.groovy"))
+@Field classNameMatcher = shell.evaluate(new File(JavaAgent.mockDir, "${mockCaze.caze}/ClassNameMatcher.groovy"))
 
 /**
  * 自定义简单的打印日志方法

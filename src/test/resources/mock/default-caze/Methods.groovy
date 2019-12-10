@@ -1,11 +1,12 @@
+import groovy.transform.Field
 import org.aspectj.lang.ProceedingJoinPoint
 import com.alibaba.fastjson.JSONObject
 import org.wt.model.Order
 import org.wt.model.User
 
 //no def,and no type,the variable will be the binding variable.
-logger = org.slf4j.LoggerFactory.getLogger("MethodsLogger")
-def proxys = new Expando()
+@Field logger = org.slf4j.LoggerFactory.getLogger("MethodsLogger")
+@Field proxys = [:]
 /**
  * 这里使用实现类（对于dubbo远程服务，这里是接口名）的简单类名，如果有简单类名相同的，需要修改ClassProxy或者InvokerInvocationHandler。
  */
@@ -101,4 +102,4 @@ proxys.AspectTest = new Object(){
     }
 }
 
-return proxys
+return this
