@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.sirenia</groupId>
 	<artifactId>java-agent</artifactId>
-	<version>2.1.1-SNAPSHOT</version>
+	<version>3.0.1-SNAPSHOT</version>
 	<properties>
 		<java.version>1.8</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -47,6 +47,17 @@
 			<scope>provided</scope>
 		</dependency>-->
 	</dependencies>
+	<distributionManagement>
+		<repository>
+			<id>releases</id>
+			<url>http://maven.sf-pay.com:8081/nexus/content/repositories/releases</url>
+		</repository>
+		<snapshotRepository>
+			<id>snapshots</id>
+			<name>Maven2 Snapshot Repository</name>
+			<url>http://maven.sf-pay.com:8081/nexus/content/repositories/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
 	<build>
 		<finalName>${project.artifactId}-${project.version}</finalName>
 		<plugins>
