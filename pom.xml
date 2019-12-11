@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.sirenia</groupId>
 	<artifactId>java-agent</artifactId>
-	<version>2.0.1-SNAPSHOT</version>
+	<version>2.1.1-SNAPSHOT</version>
 	<properties>
 		<java.version>1.8</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

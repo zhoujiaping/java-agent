@@ -1,83 +1,70 @@
 package mock.agent
 
-import groovy.transform.Field
 import org.sirenia.agent.AssistInvoker
-import org.slf4j.Logger
 
 /**
 实现远程dubbo服务的代理。远程服务即使没有注册到注册中心也可以。
 */
 import org.slf4j.LoggerFactory
 
-import java.lang.reflect.Method
-
-
-@Field logger = LoggerFactory.getLogger("InvokerInvocationHandlerLogger")
-@Field methods
-@Field includes = """
+/**
+ * 尽量不要给metaClass添加字段来保存数据，容易出bug（比如重新解析类后，即使重新给metaClass.proxys赋值，也会出现proxys还是旧值的情况）。
+ */
+class InvokerInvocationHandler{
+	def logger = LoggerFactory.getLogger("InvokerInvocationHandlerLogger")
+	def timestamp = System.currentTimeMillis()
+	def includes = """
 org.wt.service.HelloService
 org.wt.service.RemoteUserService
 """.trim().split(/\s+/) as HashSet
-/**
- * 为handler动态添加一个方法，ivkSelf ,ivkThisMethod,ivkProceed,ivkArgs是其入参。
- * 参考dubbo源码，InvokerInvocationHandler#invoke。
- * params[] => target,method,args
- */
-
-includes = {
-	->
-	def xml = "/project/dubbo.xml"
-	def parser = new XmlParser()
-	def beans = parser.parseText( new File(xml).text)
-	beans['dubbo:reference'].collect {
-		ref-> ref['@interface']
-	} as HashSet
-}.call()
-def init(methods){
-	this.methods = methods
-}
-def "invoke-invoke" (ivkSelf ,ivkThisMethod,ivkProceed,ivkArgs){
-		//dubbo服务对象，方法名称，方法参数
-	def serviceTarget = ivkArgs[0]
-	Method serviceMethod = ivkArgs[1]
-	def serviceArgs = ivkArgs[2]
-		//获取dubbo服务对象实现的接口，按接口名匹配
-	def matchedInterface = serviceTarget.getClass().getInterfaces().find{
-		includes.contains(it.getName())
+	def methods
+	def init(methods){
+		this.methods = methods
+		this.includes = {
+			->
+			def xml = "D:/xxx-dubbo.xml"
+			def parser = new XmlParser()
+			def beans = parser.parseText( new File(xml).text)
+			beans['dubbo:reference'].collect {
+				ref-> ref['@interface']
+			} as HashSet
+		}.call()
 	}
-	if(matchedInterface){
-		def className = matchedInterface.getName()
-		logger.info "transformer(dubbo)=> $className"
+	/**
+	 params[] => target,method,args
+	 */
+	def "invoke-invoke"(ivkSelf ,ivkThisMethod,ivkProceed,ivkArgs){
+		def (serviceTarget,serviceMethod,serviceArgs) = ivkArgs
+		def matchedInterface = serviceTarget.class.interfaces.find{
+			includes.contains(it.name)
+		}
+		if(matchedInterface){
+			def className = matchedInterface.name
+			logger.info "transformer(dubbo)=> $className"
 
-		def sn = className.split(/\./)[-1]
-		def proxys = methods.proxys
-		def proxy
-		if(proxys[className]){
-			proxy = proxys[className]
-		}else if(proxys[sn]){
-			proxy = proxys[sn]
+			def sn = className.split(/\./)[-1]
+			def proxys = methods.proxys
+			if(!proxys[sn]){
+				return ivkProceed.invoke(ivkSelf,ivkArgs)
+			}
+			def proxy = proxys[sn]
+			def methodName = serviceMethod.name
+			if (proxy.metaClass.respondsTo(proxy, methodName, *serviceArgs)) {
+				AssistInvoker.ifNotInvocationHandler(ivkSelf,()->{
+					logger.info("ivk proxy(dubbo)=====> ${className}#$methodName ${ivkArgs}")
+				})
+				proxy."$methodName"(*serviceArgs)
+			} else if (proxy.metaClass.respondsTo(proxy, "${methodName}-invoke", *ivkArgs)) {
+				AssistInvoker.ifNotInvocationHandler(ivkSelf,()->{
+					logger.info("ivk proxy(dubbo)=====> ${className}#$methodName-invoke ${ivkArgs}")
+				})
+				proxy."${methodName}-invoke"(*ivkArgs)
+			}else {
+				ivkProceed.invoke(ivkSelf, ivkArgs)
+			}
 		}else{
-			return ivkProceed.invoke(ivkSelf,ivkArgs)
+			ivkProceed.invoke(ivkSelf,ivkArgs)
 		}
-		def methodName = serviceMethod.name
-		if (proxy.metaClass.respondsTo(proxy, methodName, *serviceArgs)) {
-			AssistInvoker.ifNotInvocationHandler(ivkSelf,()->{
-				logger.info("ivk proxy(dubbo)=====> ${className}#$methodName ${ivkArgs}")
-			})
-			return proxy."$methodName"(*serviceArgs)
-		} else if (proxy.metaClass.respondsTo(proxy, "${methodName}-invoke", *ivkArgs)) {
-			AssistInvoker.ifNotInvocationHandler(ivkSelf,()->{
-				logger.info("ivk proxy(dubbo)=====> ${className}#$methodName-invoke ${ivkArgs}")
-			})
-			return proxy."${methodName}-invoke"(*ivkArgs)
-		}else {
-			return ivkProceed.invoke(ivkSelf, ivkArgs)
-		}
-
-	}else{
-		ivkProceed.invoke(ivkSelf,ivkArgs)
 	}
 }
-return this
-
 

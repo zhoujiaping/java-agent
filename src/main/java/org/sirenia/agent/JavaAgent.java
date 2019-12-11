@@ -8,8 +8,10 @@ import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 
+import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyObject;
 import groovy.lang.GroovyShell;
+import org.codehaus.groovy.control.CompilerConfiguration;
 
 public class JavaAgent implements ClassFileTransformer {
 	public static String mockDir = System.getProperty("user.dir")+"/src/test/resources/mock";
@@ -24,13 +26,15 @@ public class JavaAgent implements ClassFileTransformer {
 				JavaAgent.mockDir = mockDir;
 			}
 			file = new File(JavaAgent.mockDir,"agent/ClassFileTransformer.groovy");
-			GroovyShell shell = new GroovyShell();
-
+			GroovyClassLoader gcl = new GroovyClassLoader();
 			if (!file.exists()) {
 				throw new RuntimeException("file not found: " + file.getAbsolutePath());
 			}
 			System.out.println("use transformer : "+file.getAbsolutePath());
-			groovyObject = (GroovyObject) shell.evaluate(file);
+			Class clazz = gcl.parseClass(file);
+			groovyObject = (GroovyObject) clazz.newInstance();
+			//groovyObject = (GroovyObject) shell.evaluate(file);
+			groovyObject.invokeMethod("init",new Object[]{gcl});
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}

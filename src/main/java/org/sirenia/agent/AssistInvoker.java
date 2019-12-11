@@ -1,7 +1,5 @@
 package org.sirenia.agent;
 
-import javassist.tools.Callback;
-
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -59,7 +57,6 @@ public abstract class AssistInvoker {
 	public Object invoke2(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
 		return proceed.invoke(self, args);
 	}
-
 	public static void ifNotInvocationHandler(Object self, Callbacks.Callback00 cb) {
 		if (!(self instanceof InvocationHandler)) {
 			cb.apply();
