@@ -1,6 +1,7 @@
 package mock.agent
 
 import groovy.transform.Field
+import javassist.CtClass
 
 import java.security.ProtectionDomain
 import java.text.SimpleDateFormat
@@ -102,6 +103,8 @@ def transform0(ClassLoader classLoader, String className, ProtectionDomain domai
     }
     //对类进行增强
     def ctClass = classProxy.proxy(className,domain,bytes)
+   /* CtClass c = ctClass
+    c.writeFile("d:/gen-class")*/
     //有些类命中了匹配规则，但是对其进行增强没有什么意义，或者它是一个接口或者枚举，返回的俄ctClass就会为null
     if(ctClass){
         return ctClass.toBytecode()

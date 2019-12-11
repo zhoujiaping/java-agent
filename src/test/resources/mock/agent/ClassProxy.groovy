@@ -71,13 +71,10 @@ class ClassProxy {
 			private Object doInvoke(String selfClassName,Object self ,String method,Class[] types, Object[] args) {
 				//println "ivk=====> $selfClassName,$method,$args"
 				Class selfClass = Class.forName(selfClassName)
-				//如果 args里面有一个参数是this，那么打印参数的时候，就会调用它的toString方法，然后会进入invoke方法和toString方法的死循环当中。
-				if ("toString" == method && types.length == 0) {
-					return self.toString()
-				}
 				AssistInvoker.ifNotInvocationHandler(self,()->{
 					logger.info "ivk=====> $selfClassName,$method,$args"
 				})
+				//logger.info "ivk=====> $selfClassName,$method"
 				//println self.getClass().classLoader
 				//println selfClass.classLoader
 				/**
@@ -118,8 +115,17 @@ class ClassProxy {
 				 * 当前mock对象
 				 */
 				def proxy
+				//mybatis
+				if(cn == 'org.apache.ibatis.binding.MapperProxy'){
+					def mppFile = new File(JavaAgent.mockDir, "${mockCaze.caze}/MapperProxy.groovy")
+					def onMppExpire = {
+						shell.evaluate(mppFile)
+					} as OnExpire
+					def mpp = proxysCache.get(mppFile.getAbsolutePath(),onMppExpire)
+					mpp.init methods
+					proxy = mpp
+				}else if(cn == 'com.alibaba.dubbo.rpc.proxy.InvokerInvocationHandler'){
 				//由于我们是对类进行增强，所以如果是dubbo接口，就需要在dubbo调用服务之前进行拦截。
-				if(sn == 'InvokerInvocationHandler'){
 					def dubboHandlerFile = new File(JavaAgent.mockDir, "${mockCaze.caze}/InvokerInvocationHandler.groovy")
 					def onDubboHanlderExpire = {
 						shell.evaluate(dubboHandlerFile)
@@ -129,10 +135,13 @@ class ClassProxy {
 					proxy = dubboHanlder
 				}else{
 					//如果mock对象集合中找不到对应的mock对象，就调用方法原有逻辑
-					if(!proxys[sn]){
+					if(proxys[cn]){
+						proxy = proxys[cn]
+					}else if(proxys[sn]){
+						proxy = proxys[sn]
+					}else{
 						return proceed.invoke(self, args)
 					}
-					proxy = proxys[sn]
 				}
 
 				def methodName = thisMethod.name
@@ -202,6 +211,16 @@ class ClassProxy {
 			if(methodName.startsWith('lambda$')){
 				continue
 			}
+			int paramLen = method.parameterTypes.length
+/*			if ("toString" == method && paramLen == 0) {
+				continue
+			}
+			if ("hashCode" == method && paramLen == 0) {
+				continue
+			}
+			if ("equals" == method && paramLen == 1) {
+				continue
+			}*/
 			/**
 			 * 将原有方法拷贝，改为私有方法，修改名称，提供调用原有方法逻辑的机会。
 			 */
