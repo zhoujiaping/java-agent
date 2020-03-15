@@ -54,7 +54,7 @@ class ClassProxy {
 				try{
 					return doInvoke(selfClassName,self, method,  types, args)
 				}catch(e){
-					logger.error("$selfClassName,$self,$method,$types,$args")
+					logger.error("$selfClassName,$self,$method")
 					throw e
 				}
 			}
@@ -62,7 +62,8 @@ class ClassProxy {
 			private Object doInvoke(String selfClassName,Object self ,String method,Class[] types, Object[] args) {
 				//println "ivk=====> $selfClassName,$method,$args"
 				Class selfClass = Class.forName(selfClassName)
-				logger.info "ivk=====> $selfClassName,$method,$args"
+                //这个方法里面打日志要注意：如果打印args，会调用args的toString方法。如果正好args里面有个对象是代理对象，那就会进入死循环。
+				//logger.info "ivk=====> $selfClassName,$method,$args"
 				//println self.getClass().classLoader
 				//println selfClass.classLoader
 				Method thisMethod = selfClass.getDeclaredMethod(method, types)
