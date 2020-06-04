@@ -15,6 +15,8 @@ org.wt.aop.AspectTest
     def init(){
         includes << "com.alibaba.dubbo.rpc.proxy.InvokerInvocationHandler" //通过代理dubbo的InvokerInvocationHandler，实现对远程dubbo服务的代理
         includes << "org.apache.ibatis.binding.MapperProxy"
+        //代理hessian拦截器
+        includes << "org.springframework.remoting.caucho.HessianClientInterceptor"
     }
 
     boolean match(String className){

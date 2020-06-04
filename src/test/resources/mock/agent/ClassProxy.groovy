@@ -106,7 +106,15 @@ class ClassProxy {
 					def dubboHanlder = proxysCache.get(dubboHandlerFile.getAbsolutePath(),onDubboHanlderExpire)
 					dubboHanlder.init methods
 					proxy = dubboHanlder
-				}else{
+                }else if(cn == "org.springframework.remoting.caucho.HessianClientInterceptor"){
+                    def hessianInterceptorFile = new File(JavaAgent.mockDir, "${mockCaze.caze}/HessianServiceLogInterceptor.groovy")
+                    def onHessianInterceptorExpire = {
+                        gcl.parseClass(hessianInterceptorFile).newInstance()
+                    } as OnExpire
+                    def hessianInterceptor = proxysCache.get(hessianInterceptorFile.getAbsolutePath(), onHessianInterceptorExpire)
+                    hessianInterceptor.init methods
+                    proxy = hessianInterceptor
+                }else{
 					//如果mock对象集合中找不到对应的mock对象，就调用方法原有逻辑
 					if(proxys[cn]){
 						proxy = proxys[cn]
