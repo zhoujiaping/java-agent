@@ -33,19 +33,6 @@
 			<version>3.0.0-beta-1</version>
 			<type>pom</type>
 		</dependency>
-		<!--<dependency>
-			<groupId>org.apache.tomcat.embed</groupId>
-			<artifactId>tomcat-embed-core</artifactId>
-			<version>8.5.42</version>
-			<scope>provided</scope>
-		</dependency>
-		&lt;!&ndash; https://mvnrepository.com/artifact/org.apache.tomcat.embed/tomcat-embed-jasper &ndash;&gt;
-		<dependency>
-			<groupId>org.apache.tomcat.embed</groupId>
-			<artifactId>tomcat-embed-jasper</artifactId>
-			<version>8.5.42</version>
-			<scope>provided</scope>
-		</dependency>-->
 	</dependencies>
 	<distributionManagement>
 		<repository>

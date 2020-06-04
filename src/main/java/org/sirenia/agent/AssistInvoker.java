@@ -1,5 +1,9 @@
 package org.sirenia.agent;
 
+import javassist.CtClass;
+import javassist.CtMethod;
+import javassist.NotFoundException;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -57,9 +61,38 @@ public abstract class AssistInvoker {
 	public Object invoke2(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
 		return proceed.invoke(self, args);
 	}
-	public static void ifNotInvocationHandler(Object self, Callbacks.Callback00 cb) {
-		if (!(self instanceof InvocationHandler)) {
-			cb.apply();
-		}
-	}
+	public static boolean isExtendsObject(CtMethod method) throws NotFoundException {
+        String methodName = method.getName();
+        CtClass[] parameterTypes = method.getParameterTypes();
+        if(method.getDeclaringClass().getName().equals("java.lang.Object")){
+           return true;
+        }
+        if ("toString".equals(methodName) && parameterTypes.length == 0) {
+            return true;
+        }
+        if ("hashCode".equals(methodName) && parameterTypes.length == 0) {
+            return true;
+        }
+        if ("equals".equals(methodName) && parameterTypes.length == 1) {
+            return true;
+        }
+        return false;
+    }
+    public static boolean isExtendsObject(Method method){
+        String methodName = method.getName();
+        Class<?>[] parameterTypes = method.getParameterTypes();
+        if (method.getDeclaringClass() == Object.class) {
+            return true;
+        }
+        if ("toString".equals(methodName) && parameterTypes.length == 0) {
+            return true;
+        }
+        if ("hashCode".equals(methodName) && parameterTypes.length == 0) {
+            return true;
+        }
+        if ("equals".equals(methodName) && parameterTypes.length == 1) {
+            return true;
+        }
+        return false;
+    }
 }

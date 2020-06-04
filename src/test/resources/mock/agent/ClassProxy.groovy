@@ -180,6 +180,12 @@ class ClassProxy {
 			if(methodName.startsWith('lambda$')){
 				continue
 			}
+            /*
+             不要代理继承自Object的任何方法，代理这些方法容易出问题,比如代理toString方法容易进入死循环。
+            */
+            if(AssistInvoker.isExtendsObject(method)){
+                continue
+            }
 			CtMethod copyMethod = CtNewMethod.copy(method, methodName + methodSuffix, ct, null)
 			/*设置方法为私有的
 				错误方式：copyMethod.setModifiers(Modifier.PRIVATE)
@@ -190,7 +196,7 @@ class ClassProxy {
 			copyMethod.modifiers = mod&accMod
 			
 			ct.addMethod(copyMethod)
-			String body = ""
+			String body
 			if (Modifier.isStatic(mod)) {
 				body = '{return ($r)$proceed("'+className+'",null,"' + methodName + '",$sig,$args);}'
 			} else {

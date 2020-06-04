@@ -50,14 +50,10 @@ org.wt.service.RemoteUserService
 			def proxy = proxys[sn]
 			def methodName = serviceMethod.name
 			if (proxy.metaClass.respondsTo(proxy, methodName, *serviceArgs)) {
-				AssistInvoker.ifNotInvocationHandler(ivkSelf,()->{
-					logger.info("ivk proxy(dubbo)=====> ${className}#$methodName ${ivkArgs}")
-				})
+                logger.info("ivk proxy(dubbo)=====> ${className}#$methodName ${ivkArgs}")
 				proxy."$methodName"(*serviceArgs)
 			} else if (proxy.metaClass.respondsTo(proxy, "${methodName}-invoke", *ivkArgs)) {
-				AssistInvoker.ifNotInvocationHandler(ivkSelf,()->{
-					logger.info("ivk proxy(dubbo)=====> ${className}#$methodName-invoke ${ivkArgs}")
-				})
+                logger.info("ivk proxy(dubbo)=====> ${className}#$methodName-invoke ${ivkArgs}")
 				proxy."${methodName}-invoke"(*ivkArgs)
 			}else {
 				ivkProceed.invoke(ivkSelf, ivkArgs)
