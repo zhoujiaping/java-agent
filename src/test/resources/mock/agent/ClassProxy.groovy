@@ -17,193 +17,185 @@ import org.sirenia.agent.JavaAgent
 
 class ClassProxy {
 
-	def logger = org.slf4j.LoggerFactory.getLogger('ClassProxyLogger')
-	def timestamp = System.currentTimeMillis()
-	def gcl
-	def shell
-	def methodSuffix = '_pxy'
-	def ivkName = AssistInvoker.class.name
-	def mockCazeFile = new File(JavaAgent.mockDir,"agent/MockCaze.groovy")
-	def proxysCache
-	def cazeCache = new LastModCache()
-	def onMockCazeExpire = {
-		proxysCache = new LastModCache()
-		def newMockCaze = gcl.parseClass(mockCazeFile).newInstance()
-		logger.info "change mock caze => from ${it?.obj?.caze} to ${newMockCaze.caze}"
-		newMockCaze
-	} as OnExpire
-	def pool
+    def logger = org.slf4j.LoggerFactory.getLogger('ClassProxyLogger')
+    def timestamp = System.currentTimeMillis()
+    def gcl
+    def shell
+    def methodSuffix = '_pxy'
+    def ivkName = AssistInvoker.class.name
+    def mockCazeFile = new File(JavaAgent.mockDir, "agent/MockCaze.groovy")
+    def proxysCache
+    def cazeCache = new LastModCache()
+    def onMockCazeExpire = {
+        proxysCache = new LastModCache()
+        def newMockCaze = gcl.parseClass(mockCazeFile).newInstance()
+        logger.info "change mock caze => from ${it?.obj?.caze} to ${newMockCaze.caze}"
+        newMockCaze
+    } as OnExpire
+    def thirtyProxyFac = {
+        interfaceName, mockCazeName, methods ->
+            def simpleName = interfaceName.split(/\./)[-1]
+            def file = new File(JavaAgent.mockDir, "${mockCazeName}/${simpleName}.groovy")
+            def onExpire = {
+                gcl.parseClass(file).newInstance()
+            } as OnExpire
+            def pxy = proxysCache.get(file.getAbsolutePath(), onExpire)
+            pxy.init methods
+            pxy
+    }
+    def thirtyProxyFacMap = {
+        def map = [:]
+        ['org.apache.ibatis.binding.MapperProxy',
+         'com.alibaba.dubbo.rpc.proxy.InvokerInvocationHandler',
+         'org.springframework.remoting.caucho.HessianClientInterceptor'].each {
+            map[it] = thirtyProxyFac
+        }
+        map
+    }.call()
 
-	def init(GroovyClassLoader gcl){
-		pool = ClassPool.getDefault()
-		pool.appendClassPath(new LoaderClassPath(gcl.parent))
-		this.gcl = gcl
-		shell = new GroovyShell(gcl.parent)
-	}
 
-	def proxy(String className, ProtectionDomain domain, byte[] bytes){
-		def ctClass = proxy0(className)
-		if(ctClass==null){
-			return null
-		}
-		def ivk = new AssistInvoker(){
-			/*code will be trans to bytecode, it will load by webAppClassloader,
-			so, do not use code which webAppClassloader cannot find!
-			*/
-			def invoke1(String selfClassName,Object self,String method,Class[] types,Object[] args){
-				try{
-					return doInvoke(selfClassName,self, method,  types, args)
-				}catch(e){
-					logger.error("$selfClassName,$self,$method")
-					throw e
-				}
-			}
+    def pool
 
-			private Object doInvoke(String selfClassName,Object self ,String method,Class[] types, Object[] args) {
-				//println "ivk=====> $selfClassName,$method,$args"
-				Class selfClass = Class.forName(selfClassName)
-                //这个方法里面打日志要注意：如果打印args，会调用args的toString方法。如果正好args里面有个对象是代理对象，那就会进入死循环。
-				//logger.info "ivk=====> $selfClassName,$method,$args"
-				//println self.getClass().classLoader
-				//println selfClass.classLoader
-				Method thisMethod = selfClass.getDeclaredMethod(method, types)
-				Method proceed = selfClass.getDeclaredMethod(method + methodSuffix, types)
-				if (!proceed.isAccessible()) {
-					proceed.setAccessible(true)
-				}
+    def init(GroovyClassLoader gcl) {
+        pool = ClassPool.getDefault()
+        pool.appendClassPath(new LoaderClassPath(gcl.parent))
+        this.gcl = gcl
+        shell = new GroovyShell(gcl.parent)
+    }
 
-				def mockCaze = cazeCache.get(mockCazeFile.getAbsolutePath(), onMockCazeExpire)
-				//
-				def cn = selfClass.name
-				def sn = cn.split(/\./)[-1]
+    def proxy(String className, ProtectionDomain domain, byte[] bytes) {
+        def ctClass = proxy0(className)
+        if (ctClass == null) {
+            return null
+        }
+        def ivk = new AssistInvoker() {
+            /*code will be trans to bytecode, it will load by webAppClassloader,
+            so, do not use code which webAppClassloader cannot find!
+            */
 
-				def methodsFile = new File(JavaAgent.mockDir, "${mockCaze.caze}/Methods.groovy")
-				def onMethodsExpire = {
-					def newMethods = shell.evaluate(methodsFile)
-					if(!newMethods){
-						throw new RuntimeException("evaluate Methods.groovy returns null, forgot return a value?")
-					}
-					newMethods
-				} as OnExpire
-				def methods = proxysCache.get(methodsFile.getAbsolutePath(),onMethodsExpire)
-				def proxys = methods.proxys
+            def invoke1(String selfClassName, Object self, String method, Class[] types, Object[] args) {
+                try {
+                    return doInvoke(selfClassName, self, method, types, args)
+                } catch (e) {
+                    logger.error("$selfClassName,$self,$method,$types,$args")
+                    throw e
+                }
+            }
 
-				def proxy
-				//mybatis
-				if(cn == 'org.apache.ibatis.binding.MapperProxy'){
-					def mppFile = new File(JavaAgent.mockDir, "${mockCaze.caze}/MapperProxy.groovy")
-					def onMppExpire = {
-						gcl.parseClass(mppFile).newInstance()
-					} as OnExpire
-					def mpp = proxysCache.get(mppFile.getAbsolutePath(),onMppExpire)
-					mpp.init methods
-					proxy = mpp
-				}else if(cn == 'com.alibaba.dubbo.rpc.proxy.InvokerInvocationHandler'){
-					def dubboHandlerFile = new File(JavaAgent.mockDir, "${mockCaze.caze}/InvokerInvocationHandler.groovy")
-					def onDubboHanlderExpire = {
-						gcl.parseClass(dubboHandlerFile).newInstance()
-					} as OnExpire
-					def dubboHanlder = proxysCache.get(dubboHandlerFile.getAbsolutePath(),onDubboHanlderExpire)
-					dubboHanlder.init methods
-					proxy = dubboHanlder
-                }else if(cn == "org.springframework.remoting.caucho.HessianClientInterceptor"){
-                    def hessianInterceptorFile = new File(JavaAgent.mockDir, "${mockCaze.caze}/HessianServiceLogInterceptor.groovy")
-                    def onHessianInterceptorExpire = {
-                        gcl.parseClass(hessianInterceptorFile).newInstance()
-                    } as OnExpire
-                    def hessianInterceptor = proxysCache.get(hessianInterceptorFile.getAbsolutePath(), onHessianInterceptorExpire)
-                    hessianInterceptor.init methods
-                    proxy = hessianInterceptor
-                }else{
-					//如果mock对象集合中找不到对应的mock对象，就调用方法原有逻辑
-					if(proxys[cn]){
-						proxy = proxys[cn]
-					}else if(proxys[sn]){
-						proxy = proxys[sn]
-					}else{
-						return proceed.invoke(self, args)
-					}
-				}
+            private Object doInvoke(String selfClassName, Object self, String method, Class[] types, Object[] args) {
+                Class selfClass = Class.forName(selfClassName)
+                Method thisMethod = selfClass.getDeclaredMethod(method, types)
+                Method proceed = selfClass.getDeclaredMethod(method + methodSuffix, types)
+                if (!proceed.isAccessible()) {
+                    proceed.setAccessible(true)
+                }
+                def mockCaze = cazeCache.get(mockCazeFile.getAbsolutePath(), onMockCazeExpire)
+                def selfClassSimpleName = selfClassName.split(/\./)[-1]
 
-				def methodName = thisMethod.name
-				if (proxy.metaClass.respondsTo(proxy, methodName, *args)) {
-					logger.info("ivk proxy=====> ${cn}#$methodName")
-					return proxy."$methodName"(*args)
-				} else {
-					def ivkArgs = [self, thisMethod, proceed, args]
-					if (proxy.metaClass.respondsTo(proxy, "${methodName}-invoke", *ivkArgs)) {
-						logger.info("ivk proxy=====> ${cn}#$methodName-invoke")
-						return proxy."${methodName}-invoke"(*ivkArgs)
-					} else {
-						return proceed.invoke(self, args)
-					}
-				}
-			}
-		}
-		AssistInvoker.ivkMap.put(ctClass.name, ivk)
-		//ctClass.toClass()
-		//ctClass.toBytecode()
-		ctClass
-	}
+                def methodsFile = new File(JavaAgent.mockDir, "${mockCaze.caze}/Methods.groovy")
+                def onMethodsExpire = {
+                    def newMethods = shell.evaluate(methodsFile)
+                    if (!newMethods) {
+                        throw new RuntimeException("evaluate Methods.groovy returns null, forgot return a value?")
+                    }
+                    newMethods
+                } as OnExpire
+                def methods = proxysCache.get(methodsFile.getAbsolutePath(), onMethodsExpire)
+                def proxy
+                if (thirtyProxyFacMap[selfClassName]) {
+                    proxy = thirtyProxyFacMap[selfClassName].call(selfClassName, mockCaze.caze, methods)
+                } else {
+                    //如果mock对象集合中找不到对应的mock对象，就调用方法原有逻辑
+                    def proxys = methods.proxys
+                    if (proxys[selfClassName]) {
+                        proxy = proxys[selfClassName]
+                    } else if (proxys[selfClassSimpleName]) {
+                        proxy = proxys[selfClassSimpleName]
+                    } else {
+                        return proceed.invoke(self, args)
+                    }
+                }
+                if (!proxy.hasProperty('overwrite-missing-method')) {
+                    proxy.metaClass.methodMissing = {
+                        methodName, arguments ->
+                            IvkJoinPointManager.currentJoinPoint().proceed()
+                    }
+                    proxy.metaClass['overwrite-missing-method'] = true
+                }
+                IvkJoinPointManager.withInvokerStackManage(new IvkJoinPoint([
+                        self      : self,
+                        thisMethod: thisMethod,
+                        proceed   : proceed,
+                        args      : args
+                ])) {
+                    proxy."${thisMethod.name}"(*args)
+                }
+            }
+        }
+        AssistInvoker.ivkMap.put(ctClass.name, ivk)
+        //ctClass.toClass()
+        //ctClass.toBytecode()
+        ctClass
+    }
 
-    CtClass proxy0(String className){
+    CtClass proxy0(String className) {
         CtClass ct = pool.getCtClass(className)
         // 解冻
         if (ct.isFrozen()) {
             ct.defrost()
         }
-		if(ct.isInterface()){
-			return null
-		}
-		if(ct.isEnum()){
-			return null
-		}
-		/*
+        if (ct.isInterface()) {
+            return null
+        }
+        if (ct.isEnum()) {
+            return null
+        }
+        /*
         添加一个标记字段，如果已经被我们代理过，就不再代理。
         */
-		try{
-			ct.getDeclaredField("_pxy")
-			return null
-		}catch(javassist.NotFoundException e){
-			logger.info("transform => $className")
-			CtField ctf = new CtField(CtClass.intType,'_pxy',ct)
-			ct.addField(ctf)
-		}
-		CtMethod[] methods = ct.getDeclaredMethods()// ct.getMethods()
-		for (int i = 0;i < methods.length;i++) {
-			CtMethod method = methods[i]
-			int mod = method.modifiers
-			if(Modifier.isAbstract(mod)){
-				continue
-			}
-			String methodName = method.name
-			if(methodName.startsWith('lambda$')){
-				continue
-			}
-            /*
-             不要代理继承自Object的任何方法，代理这些方法容易出问题,比如代理toString方法容易进入死循环。
-            */
-            if(AssistInvoker.isExtendsObject(method)){
+        try {
+            ct.getDeclaredField("_pxy")
+            return null
+        } catch (javassist.NotFoundException e) {
+            logger.info("transform => $className")
+            CtField ctf = new CtField(CtClass.intType, '_pxy', ct)
+            ct.addField(ctf)
+        }
+        CtMethod[] methods = ct.getDeclaredMethods()// ct.getMethods()
+        for (int i = 0; i < methods.length; i++) {
+            CtMethod method = methods[i]
+            int mod = method.modifiers
+            if (Modifier.isAbstract(mod)) {
                 continue
             }
-			CtMethod copyMethod = CtNewMethod.copy(method, methodName + methodSuffix, ct, null)
-			/*设置方法为私有的
-				错误方式：copyMethod.setModifiers(Modifier.PRIVATE)
-				这样会修改去掉其他修饰符
-			*/
-			//mod = mod &(~(Modifier.PUBLIC|Modifier.PROTECTED|Modifier.PRIVATE));
-			int accMod = AccessFlag.setPrivate(mod)
-			copyMethod.modifiers = mod&accMod
-			
-			ct.addMethod(copyMethod)
-			String body
-			if (Modifier.isStatic(mod)) {
-				body = '{return ($r)$proceed("'+className+'",null,"' + methodName + '",$sig,$args);}'
-			} else {
-				//body = '{return ($r)$proceed($class,$0,"' + methodName + '",$sig,$args);}'
-				body = '{return ($r)$proceed("'+className+'",$0,"' + methodName + '",$sig,$args);}'
-			}
-			method.setBody(body, ivkName, "invoke")
+            String methodName = method.name
+            if (methodName.startsWith('lambda$')) {
+                continue
+            }
+            /*
+            不要代理继承自Object的任何方法，代理这些方法容易出问题,比如代理toString方法容易进入死循环。
+             */
+            if (AssistInvoker.isExtendsObject(method)) {
+                continue
+            }
+            CtMethod copyMethod = CtNewMethod.copy(method, methodName + methodSuffix, ct, null)
+            /*设置方法为私有的
+                错误方式：copyMethod.setModifiers(Modifier.PRIVATE)
+                这样会修改去掉其他修饰符
+            */
+            //mod = mod &(~(Modifier.PUBLIC|Modifier.PROTECTED|Modifier.PRIVATE));
+            int accMod = AccessFlag.setPrivate(mod)
+            copyMethod.modifiers = mod & accMod
+
+            ct.addMethod(copyMethod)
+            String body = ""
+            if (Modifier.isStatic(mod)) {
+                body = '{return ($r)$proceed("' + className + '",null,"' + methodName + '",$sig,$args);}'
+            } else {
+                //body = '{return ($r)$proceed($class,$0,"' + methodName + '",$sig,$args);}'
+                body = '{return ($r)$proceed("' + className + '",$0,"' + methodName + '",$sig,$args);}'
+            }
+            method.setBody(body, ivkName, "invoke")
         }
         // Class<?> c = ct.toClass()
         // ct.writeFile("d:/")
