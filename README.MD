@@ -29,7 +29,7 @@ java5引入了一个api，叫做Instrument，它支持在jvm启动时拦截类�
 * 学习使用javassist增强字节码
 * 了解dubbo消费端执行的逻辑
 ## 1.3 环境要求
-* java8及以上（后续版本会支持java7）
+* java8及以上
 # 2 使用方法
 由于其原理是基于jvm级别的代理，所以普通java项目和web项目的使用方法差不多。
 这里只介绍web项目部署在tomcat下的使用方法。
