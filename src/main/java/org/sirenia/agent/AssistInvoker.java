@@ -18,6 +18,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public abstract class AssistInvoker {
 	public static final String methodSuffix = "_pxy";
+	/**
+	 *  every class map a AssistInvoker instance.
+	 *  so, we can delegate many class to AssistInvoker#invoke,
+	 *  but every class will own a AssistInvoker instance.
+	 */
 	public static final Map<String, AssistInvoker> ivkMap = new ConcurrentHashMap<>();
 	public static AssistInvoker defaultIvk = new AssistInvoker() {
 		@Override
